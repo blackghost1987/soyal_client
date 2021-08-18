@@ -13,6 +13,6 @@ fn reader_in_the_loop_test() {
 
     };
     let client = SoyalClient::new(access_data, Some(true));
-    let res = client.test_reader();
+    let res = client.get_reader_status();
     assert!(res.is_ok())
 }

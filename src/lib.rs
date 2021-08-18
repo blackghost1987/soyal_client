@@ -6,9 +6,6 @@ use serde::Serialize;
 use std::io;
 use crate::api_types::*;
 
-//use serde_json::json;
-//use std::fmt::Debug;
-
 #[derive(Clone, Debug, Serialize)]
 pub struct AccessData {
     pub ip: IpAddr,
@@ -57,7 +54,7 @@ impl SoyalClient {
         Result::Ok(buffer[0..size].to_vec())
     }
 
-    pub fn test_reader(&self) -> Result<EchoResponse, ClientError> {
+    pub fn get_reader_status(&self) -> Result<EchoResponse, ClientError> {
         let raw = self.send(0x18, &[])?;
         EchoResponse::decode(&raw)
     }
@@ -79,7 +76,7 @@ mod tests {
 
         };
         let client = SoyalClient::new(access_data, Some(true));
-        let res = client.test_reader();
+        let res = client.get_reader_status();
         assert!(res.is_ok())
     }
 }

@@ -1,13 +1,12 @@
-//use chrono::{DateTime, Duration, Utc};
-use serde::{Serialize, Deserialize};
 use std::fmt::Debug;
 use std::ops::BitXorAssign;
 use std::convert;
-//use std::collections::HashMap;
-//use serde_json::Value;
+
+use serde::{Serialize, Deserialize};
 
 const EXTENDED_HEADER: [u8; 4] = [0xFF, 0x00, 0x5A, 0xA5];
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum ProtocolError {
     UnknownEventType,
     MessageTooShort,
@@ -16,6 +15,7 @@ pub enum ProtocolError {
     UnexpectedFirstHeaderByte,
 }
 
+#[derive(Debug)]
 pub enum ClientError {
     IOError(std::io::Error),
     ProtocolError(ProtocolError),
