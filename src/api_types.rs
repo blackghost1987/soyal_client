@@ -167,32 +167,75 @@ impl IoStatusData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct KeysPressedData {
+pub struct AllKeysPressed {
+    fifth_key_data: Option<u8>,
+    input_value: u16,
+    //device_params: DeviceParameters, // TODO implement
+    //elevator_controller_params: ElevatorControllerParams, // 401RO16’s parameter (24*xxx#) // TODO implement
+    //key_data: KeyData, TODO implement
+}
+
+impl AllKeysPressed {
+    pub fn decode(data: &[u8]) -> Result<AllKeysPressed, ClientError> {
+        let fifth_key_data = if data[0] & 0b1000000 != 0 { Some(data[0]) } else { None };
+        let input_value = u16::from_be_bytes([data[1], data[2]]);
+
+        Ok(AllKeysPressed {
+            input_value,
+            fifth_key_data,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NewCardPresentData {
+    // TODO implement
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct KeypadEventData {
+    // TODO implement
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum EchoEvent {
     IoStatus(IoStatusData),
-    KeysPressed(KeysPressedData),
+    AllKeysPressed(AllKeysPressed), // 4 or 5 keys pressed (depends on Mode 8)
     NewCardPresent(NewCardPresentData),
-    Keypad(KeypadEventData),
+    KeypadEvent(KeypadEventData), // some keys pressed
+}
+
+impl convert::From<IoStatusData> for EchoEvent {
+    fn from(e: IoStatusData) -> EchoEvent {
+        EchoEvent::IoStatus(e)
+    }
+}
+
+impl convert::From<AllKeysPressed> for EchoEvent {
+    fn from(e: AllKeysPressed) -> EchoEvent {
+        EchoEvent::AllKeysPressed(e)
+    }
+}
+
+impl convert::From<NewCardPresentData> for EchoEvent {
+    fn from(e: NewCardPresentData) -> EchoEvent {
+        EchoEvent::NewCardPresent(e)
+    }
+}
+
+impl convert::From<KeypadEventData> for EchoEvent {
+    fn from(e: KeypadEventData) -> EchoEvent {
+        EchoEvent::KeypadEvent(e)
+    }
 }
 
 impl EchoEvent {
     pub fn decode(event_type: u8, data: &[u8]) -> Result<EchoEvent, ClientError> {
         match event_type {
-            0x00 => IoStatusData::decode(data).map(EchoEvent::IoStatus),
-            0x01 => unimplemented!(),
-            0x02 => unimplemented!(),
-            0x06 => unimplemented!(),
+            0x00 => IoStatusData::decode(data).map(EchoEvent::from),
+            0x01 => AllKeysPressed::decode(data).map(EchoEvent::from),
+            0x02 => Ok(EchoEvent::NewCardPresent(NewCardPresentData {})),
+            0x06 => Ok(EchoEvent::KeypadEvent(KeypadEventData {})),
             _ => Err(ProtocolError::UnknownEventType.into()),
         }
     }

@@ -2,7 +2,6 @@ use soyal_client::*;
 use std::net::{IpAddr, Ipv4Addr};
 
 #[test]
-#[ignore]
 fn reader_in_the_loop_test() {
     let access_data = AccessData {
         ip: IpAddr::from(Ipv4Addr::new(192, 168, 1, 127)),
@@ -14,5 +13,6 @@ fn reader_in_the_loop_test() {
     };
     let client = SoyalClient::new(access_data, Some(true));
     let res = client.get_reader_status();
+    println!("Hardware status: {:?}", res);
     assert!(res.is_ok())
 }
