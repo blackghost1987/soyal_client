@@ -1,10 +1,16 @@
 pub mod api_types;
+pub mod response;
+pub mod request;
+
+use crate::api_types::*;
+use crate::request::*;
+use crate::response::*;
 
 use std::io::prelude::*;
 use std::net::{IpAddr, TcpStream, SocketAddr};
 use serde::Serialize;
 use std::io;
-use crate::api_types::*;
+
 
 #[derive(Clone, Debug, Serialize)]
 pub struct AccessData {
@@ -12,7 +18,7 @@ pub struct AccessData {
     pub port: u16,
     pub destination_id: u8,
     pub username: String,
-    pub password: String,
+    pub password: String, // FIXME why is this not needed?
 }
 
 pub struct SoyalClient {
@@ -28,9 +34,9 @@ impl SoyalClient {
         }
     }
 
-    fn send(&self, command_code: u8, data: &[u8]) -> io::Result<Vec<u8>> {
+    fn send(&self, command: Command, data: &[u8]) -> io::Result<Vec<u8>> {
         if self.debug_log {
-            println!("Sending {:?} to {:?}", data, self.access_data);
+            println!("Sending command {:?} (with data {:?}) to {:?}", command, data, self.access_data);
         }
 
         let address = SocketAddr::new(self.access_data.ip, self.access_data.port);
@@ -39,7 +45,7 @@ impl SoyalClient {
 
         let message = ExtendedMessage {
             destination_id: self.access_data.destination_id,
-            command_code,
+            command_code: command as u8,
             data
         };
 
@@ -51,32 +57,56 @@ impl SoyalClient {
             println!("Received {:?}", &buffer[0..size]);
         }
 
-        Result::Ok(buffer[0..size].to_vec())
+        io::Result::Ok(buffer[0..size].to_vec())
     }
 
-    pub fn get_reader_status(&self) -> Result<EchoResponse, ClientError> {
-        let raw = self.send(0x18, &[])?;
+    //*** CONTROLLER PARAMETER GETTERS
+
+    pub fn get_controller_params(&self, sub_code: ControllerParamSubCommand) -> io::Result<Vec<u8>> {
+        self.send(Command::GetControllerParams, &[sub_code as u8])
+    }
+
+    // TODO more getters
+
+    pub fn get_controller_options(&self) -> Result<()> {
+        let _raw = self.get_controller_params(ControllerParamSubCommand::ControllerOptionParams)?;
+        // TODO decode
+        Ok(())
+    }
+
+    pub fn get_reader_serial_number(&self) -> Result<SerialNumberResponse> {
+        let raw = self.get_controller_params(ControllerParamSubCommand::ContorllerSerialNumber)?;
+        SerialNumberResponse::decode(&raw)
+    }
+
+    pub fn get_relay_delay_time(&self) -> Result<RelayDelayResponse> {
+        let raw = self.get_controller_params(ControllerParamSubCommand::RelayDelayTime)?;
+        RelayDelayResponse::decode(&raw)
+    }
+
+    pub fn get_controller_edit_password(&self) -> Result<EditPasswordResponse> {
+        let raw = self.get_controller_params(ControllerParamSubCommand::ControllerEditPassword)?;
+        EditPasswordResponse::decode(&raw)
+    }
+
+    //*** CONTROLLER PARAMETER SETTERS
+
+    // TODO add data
+    pub fn set_controller_params(&self, sub_code: u8) -> io::Result<Vec<u8>> {
+        self.send(Command::SetControllerParams, &[sub_code])
+    }
+
+    //*** GENERIC COMMANDS
+
+    pub fn get_reader_status(&self) -> Result<EchoResponse> {
+        let raw = self.send(Command::HostingPolling, &[])?;
         EchoResponse::decode(&raw)
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::net::Ipv4Addr;
-
-    #[test]
-    fn reader_test() {
-        let access_data = AccessData {
-            ip: IpAddr::from(Ipv4Addr::new(192, 168, 1, 127)),
-            port: 1621,
-            destination_id: 1,
-            username: "SuperAdm".to_string(),
-            password: "721568".to_string(),
-
-        };
-        let client = SoyalClient::new(access_data, Some(true));
-        let res = client.get_reader_status();
-        assert!(res.is_ok())
-    }
+    // TODO Relay On/Off control (0x21)
+    // TODO Get the oldest event log of device (0x25)
+    // TODO Remove the oldest event log of device (0x37)
+    // TODO Empty the event log of device (0x2D)
+    // TODO Set User Parameters (0x83/0x84)
+    // TODO Get User Parameters (0x87)
 }

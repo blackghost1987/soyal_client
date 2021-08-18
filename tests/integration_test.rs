@@ -1,18 +1,55 @@
 use soyal_client::*;
 use std::net::{IpAddr, Ipv4Addr};
 
-#[test]
-fn reader_in_the_loop_test() {
+// WARNING: Hardware-in-the-loop tests! Set real access data here:
+const IP_ADDR: [u8; 4] = [192, 168, 1, 127];
+const USERNAME: &str = "SuperAdm";
+const PASSWORD: &str = "721568";
+
+fn create_client() -> SoyalClient {
     let access_data = AccessData {
-        ip: IpAddr::from(Ipv4Addr::new(192, 168, 1, 127)),
+        ip: IpAddr::from(Ipv4Addr::from(IP_ADDR)),
         port: 1621,
         destination_id: 1,
-        username: "SuperAdm".to_string(),
-        password: "721568".to_string(),
+        username: USERNAME.to_string(),
+        password: PASSWORD.to_string(),
 
     };
-    let client = SoyalClient::new(access_data, Some(true));
+    SoyalClient::new(access_data, Some(true))
+}
+
+#[test]
+#[ignore]
+fn test_get_reader_status() {
+    let client = create_client();
     let res = client.get_reader_status();
     println!("Hardware status: {:?}", res);
+    assert!(res.is_ok())
+}
+
+#[test]
+#[ignore]
+fn test_get_reader_serial() {
+    let client = create_client();
+    let res = client.get_reader_serial_number();
+    println!("Hardware serial: {:?}", res);
+    assert!(res.is_ok())
+}
+
+#[test]
+#[ignore]
+fn test_get_edit_pass() {
+    let client = create_client();
+    let res = client.get_controller_edit_password();
+    println!("Hardware password: {:?}", res);
+    assert!(res.is_ok())
+}
+
+#[test]
+//#[ignore]
+fn test_get_relay_delays() {
+    let client = create_client();
+    let res = client.get_relay_delay_time();
+    println!("Hardware delays: {:?}", res);
     assert!(res.is_ok())
 }
