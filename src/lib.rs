@@ -75,8 +75,12 @@ impl SoyalClient {
         self.get_controller_params(ControllerParamSubCommand::ControllerOptionParams)
     }
 
-    pub fn get_reader_serial_number(&self) -> Result<SerialNumberResponse> {
-        self.get_controller_params(ControllerParamSubCommand::ContorllerSerialNumber)
+    pub fn get_remote_tcp_server_params(&self) -> Result<RemoteTCPServerParamsResponse> {
+        self.get_controller_params(ControllerParamSubCommand::RemoteTCPServerParams)
+    }
+
+    pub fn get_ip_and_mac_address(&self) -> Result<IpAndMacAddressResponse> {
+        self.get_controller_params(ControllerParamSubCommand::IpAndMacAddress)
     }
 
     pub fn get_relay_delay_time(&self) -> Result<RelayDelayResponse> {
@@ -87,9 +91,13 @@ impl SoyalClient {
         self.get_controller_params(ControllerParamSubCommand::ControllerEditPassword)
     }
 
+    pub fn get_reader_serial_number(&self) -> Result<SerialNumberResponse> {
+        self.get_controller_params(ControllerParamSubCommand::ContorllerSerialNumber)
+    }
+
     //*** CONTROLLER PARAMETER SETTERS
 
-    // TODO add data
+    // TODO try to add data
     pub fn set_controller_params(&self, sub_code: u8) -> io::Result<Vec<u8>> {
         self.send(Command::SetControllerParams, &[sub_code])
     }
@@ -101,10 +109,26 @@ impl SoyalClient {
         EchoResponse::decode(&raw)
     }
 
-    // TODO Relay On/Off control (0x21)
-    // TODO Get the oldest event log of device (0x25)
-    // TODO Remove the oldest event log of device (0x37)
-    // TODO Empty the event log of device (0x2D)
-    // TODO Set User Parameters (0x83/0x84)
+    pub fn get_oldest_event_log(&self) -> Result<()> {
+        let _raw = self.send(Command::GetOldestEventLog, &[])?;
+        // TODO handle ACK (if no log) OR DATA
+        Ok(())
+    }
+
+    pub fn remove_oldest_event_log(&self) -> Result<()> {
+        let _raw = self.send(Command::RemoveOldestEventLog, &[])?;
+        // TODO handle ACK / NACK
+        Ok(())
+    }
+
+    pub fn empty_event_log(&self) -> Result<()> {
+        let _raw = self.send(Command::EmptyEventLog, &[])?;
+        // TODO handle ACK / NACK
+        Ok(())
+    }
+
     // TODO Get User Parameters (0x87)
+    // TODO Set User Parameters (0x83/0x84)
+
+    // TODO Relay On/Off control (0x21)
 }

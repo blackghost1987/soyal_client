@@ -41,7 +41,7 @@ pub enum ControllerParamSubCommand {
     RS485SubNodeDoorNumber = 0x05,
     CustomData             = 0x06,
     UIDBlockParams         = 0x08,
-    RemoteTCPServer        = 0x0A,
+    RemoteTCPServerParams  = 0x0A,
     DutyText               = 0x0B,
     DESFireFieldAssignment = 0x12,
     HostingFlag            = 0x13,
