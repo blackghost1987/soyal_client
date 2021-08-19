@@ -102,6 +102,33 @@ impl ControllerOptions {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ExtendedControllerOptions {
+    pub door_relay_active_in_auto_open_time_zone: bool,
+    pub stop_alarm_at_door_closed: bool,
+    pub free_tag_access_mode: bool,
+    pub use_main_door_relay_for_weigand_port: bool,
+    pub auto_disarmed_time_zone: bool,
+    pub key_pad_inhibited: bool,
+    pub egress_button_sound: bool,
+}
+
+impl ExtendedControllerOptions {
+    pub fn decode(data: u8) -> ExtendedControllerOptions {
+        ExtendedControllerOptions {
+            door_relay_active_in_auto_open_time_zone: data & 0b10000000 != 0,
+            stop_alarm_at_door_closed:                data & 0b01000000 != 0,
+            free_tag_access_mode:                     data & 0b00100000 != 0,
+            use_main_door_relay_for_weigand_port:     data & 0b00010000 != 0,
+            auto_disarmed_time_zone:                  data & 0b00001000 != 0,
+            key_pad_inhibited:                        data & 0b00000100 != 0,
+            // reserved                               data & 0b00000010 != 0,
+            egress_button_sound:                      data & 0b00000001 != 0,
+        }
+    }
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IoStatusData {
     pub status_data: StatusData,
     pub alarm_type: Option<AlarmType>,

@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
 
 use crate::api_types::*;
+use std::convert::TryFrom;
 
 pub trait Response<T> {
     fn decode(raw: &Vec<u8>) -> Result<T>;
@@ -49,15 +50,15 @@ pub struct EchoResponse {
 
 impl Response<EchoResponse> for EchoResponse {
     fn decode(raw: &Vec<u8>) -> Result<EchoResponse> {
-        let raw_msg = Self::get_message_part(raw)?;
-        let msg_length = raw_msg.len();
+        let msg = Self::get_message_part(raw)?;
+        let msg_length = msg.len();
 
-        let destination_id = raw_msg[0];
-        let function_code  = raw_msg[1];
-        let source         = raw_msg[2];
-        let event_type     = raw_msg[3];
+        let destination_id = msg[0];
+        let function_code  = msg[1];
+        let source         = msg[2];
+        let event_type     = msg[3];
 
-        let raw_data = &raw_msg[4..msg_length];
+        let raw_data = &msg[4..msg_length];
         let data = EchoEvent::decode(event_type, raw_data)?;
 
         Ok(EchoResponse {
@@ -81,13 +82,13 @@ pub struct SerialNumberResponse {
 
 impl Response<SerialNumberResponse> for SerialNumberResponse {
     fn decode(raw: &Vec<u8>) -> Result<SerialNumberResponse> {
-        let raw_msg = Self::get_message_part(raw)?;
+        let msg = Self::get_message_part(raw)?;
 
-        let destination_id = raw_msg[0];
-        let command = raw_msg[1];
+        let destination_id = msg[0];
+        let command = msg[1];
         assert_eq!(command, 3, "Getter Response command should be 0x03");
-        let source = raw_msg[2];
-        let serial = raw_msg[5..17].to_vec();
+        let source = msg[2];
+        let serial = msg[5..17].to_vec();
 
         Ok(SerialNumberResponse {
             destination_id,
@@ -103,31 +104,31 @@ pub struct RelayDelayResponse {
     pub destination_id: u8, // 0x00 Host
     pub command: u8,
     pub source: u8,
-    pub main_port_door_time: u16,
-    pub wg_port_door_time: u16,
-    pub alarm_relay_time: u16,
-    pub lift_controller_time: u16,
+    pub main_port_door_relay_time:    u16, // 10ms
+    pub weigand_port_door_relay_time: u16, // 10ms
+    pub alarm_relay_time:       u16, // 10ms
+    pub lift_controller_time:   u16, // 10ms
 }
 
 impl Response<RelayDelayResponse> for RelayDelayResponse {
     fn decode(raw: &Vec<u8>) -> Result<RelayDelayResponse> {
-        let raw_msg = Self::get_message_part(raw)?;
+        let msg = Self::get_message_part(raw)?;
 
-        let destination_id = raw_msg[0];
-        let command = raw_msg[1];
+        let destination_id = msg[0];
+        let command = msg[1];
         assert_eq!(command, 3, "Getter Response command should be 0x03");
-        let source = raw_msg[2];
-        let main_port_door_time  = u16::from_be_bytes([raw_msg[3], raw_msg[4]]);
-        let wg_port_door_time    = u16::from_be_bytes([raw_msg[5], raw_msg[6]]);
-        let alarm_relay_time     = u16::from_be_bytes([raw_msg[7], raw_msg[8]]);
-        let lift_controller_time = u16::from_be_bytes([raw_msg[9], raw_msg[10]]);
+        let source = msg[2];
+        let main_port_door_relay_time    = u16::from_be_bytes([msg[3], msg[4]]);
+        let weigand_port_door_relay_time = u16::from_be_bytes([msg[5], msg[6]]);
+        let alarm_relay_time     = u16::from_be_bytes([msg[7], msg[8]]);
+        let lift_controller_time = u16::from_be_bytes([msg[9], msg[10]]);
 
         Ok(RelayDelayResponse {
             destination_id,
             command,
             source,
-            main_port_door_time,
-            wg_port_door_time,
+            main_port_door_relay_time,
+            weigand_port_door_relay_time,
             alarm_relay_time,
             lift_controller_time,
         })
@@ -138,22 +139,142 @@ impl Response<RelayDelayResponse> for RelayDelayResponse {
 pub struct EditPasswordResponse {
     pub destination_id: u8, // 0x00 Host
     pub command: u8,
+    // FIXME maybe there's a source param here as well? are there dangling data?
     pub password: u32,
 }
 
 impl Response<EditPasswordResponse> for EditPasswordResponse {
     fn decode(raw: &Vec<u8>) -> Result<EditPasswordResponse> {
-        let raw_msg = Self::get_message_part(raw)?;
-        let destination_id = raw_msg[0];
-        let command = raw_msg[1];
+        let msg = Self::get_message_part(raw)?;
+        let destination_id = msg[0];
+        let command = msg[1];
         assert_eq!(command, 3, "Getter Response command should be 0x03");
-        let password = u32::from_be_bytes([raw_msg[2], raw_msg[3], raw_msg[4], raw_msg[5]]);
+        let password = u32::from_be_bytes([msg[2], msg[3], msg[4], msg[5]]);
 
         Ok(EditPasswordResponse {
             destination_id,
             command,
             password,
         })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ControllerType {
+    AR881E    = 0xC0,
+    AR725Ev2  = 0xC1,
+    AR829Ev5  = 0xC2,
+    AR821EFv5 = 0xC3,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AccessMode {
+    PinOnly,           // Mode 8: 4 digit PIN
+    UserAddressAndPin, // Mode 4: 5 digit address + 4 digit PIN
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ControllerOptionsResponse {
+    pub destination_id: u8, // 0x00 Host
+    pub command: u8,
+    pub source: u8,
+    pub controller_type: ControllerType,
+    pub main_port_door_number:    u8,
+    pub weigand_port_door_number: u8,
+    pub edit_password:           u32,
+    pub master_user_range_start: u32,
+    pub master_user_range_end:   u32,
+    pub general_password:        u16,
+    pub duress_code:             u16,
+    //pub connected_reader_bitmask: ??? // AR721Ev2 only
+    tag_hold_time:                u16, // 10ms
+    main_port_door_relay_time:    u16, // 10ms
+    weigand_port_door_relay_time: u16, // 10ms
+    alarm_relay_time:             u16, // 10ms
+    main_port_options:             ControllerOptions,
+    weigand_port_options:          ControllerOptions,
+    main_port_extended_options:    ExtendedControllerOptions,
+    weigand_port_extended_options: ExtendedControllerOptions,
+    main_port_door_close_time:    u8, // seconds
+    weigand_port_door_close_time: u8, // seconds
+    main_port_arming:    bool,
+    weigand_port_arming: bool,
+    // TODO access_mode: AccessMode,
+    armed_output_pulse_width: u8, // 10 ms
+    arming_delay: u8, // seconds
+    alarm_delay:  u8, // seconds
+    // Data43: UART2 / UART3
+    // Data44: CommonOptions
+    // Data45: DisplayOptions
+    // Data46..Data52 - only present for later versions
+}
+
+impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
+    fn decode(raw: &Vec<u8>) -> Result<ControllerOptionsResponse> {
+        let msg = Self::get_message_part(raw)?;
+        let destination_id = msg[0];
+        let command = msg[1];
+        assert_eq!(command, 3, "Getter Response command should be 0x03");
+        let data = &msg[2..];
+
+        let source = data[0];
+        // FIXME how to do this?
+        //let controller_type = ControllerType::try_from(data[1])?;
+        let controller_type = ControllerType::AR725Ev2;
+        let main_port_door_number    = data[2];
+        let weigand_port_door_number = data[3];
+        let edit_password = u32::from_be_bytes([data[4], data[5], data[6], data[7]]);
+        let master_user_range_start = u32::from_be_bytes([data[8], data[9], data[10], data[11]]);
+        let master_user_range_end   = u32::from_be_bytes([data[12], data[13], data[14], data[15]]);
+        let general_password        = u16::from_be_bytes([data[16], data[17]]);
+        let duress_code             = u16::from_be_bytes([data[18], data[19]]);
+        // Data 20-21 reserved
+        // Data 22-23 connected_reader_bitmask - unimplemented
+        let tag_hold_time = u16::from_be_bytes([data[24], data[25]]);
+        let main_port_door_relay_time    = u16::from_be_bytes([data[26], data[27]]);
+        let weigand_port_door_relay_time = u16::from_be_bytes([data[28], data[29]]);
+        let alarm_relay_time = u16::from_be_bytes([data[30], data[31]]);
+        let main_port_options    = ControllerOptions::decode(data[32]);
+        let weigand_port_options = ControllerOptions::decode(data[33]);
+        let main_port_extended_options    = ExtendedControllerOptions::decode(data[34]);
+        let weigand_port_extended_options = ExtendedControllerOptions::decode(data[35]);
+        let main_port_door_close_time    = data[36];
+        let weigand_port_door_close_time = data[37];
+        let main_port_arming    = data[38] & 0b00000001 != 0;
+        let weigand_port_arming = data[38] & 0b00000010 != 0;
+        // TODO let access_mode = AccessMode::decode(data[39)
+        let armed_output_pulse_width = data[40];
+        let arming_delay = data[41];
+        let alarm_delay =  data[42];
+
+        Ok(ControllerOptionsResponse {
+            destination_id,
+            command,
+            source,
+            controller_type,
+            main_port_door_number,
+            weigand_port_door_number,
+            edit_password,
+            master_user_range_start,
+            master_user_range_end,
+            general_password,
+            duress_code,
+            tag_hold_time,
+            main_port_door_relay_time,
+            weigand_port_door_relay_time,
+            alarm_relay_time,
+            main_port_options,
+            weigand_port_options,
+            main_port_extended_options,
+            weigand_port_extended_options,
+            main_port_door_close_time,
+            weigand_port_door_close_time,
+            main_port_arming,
+            weigand_port_arming,
+            armed_output_pulse_width,
+            arming_delay,
+            alarm_delay,
+       })
     }
 }
 

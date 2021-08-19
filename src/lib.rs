@@ -62,31 +62,29 @@ impl SoyalClient {
 
     //*** CONTROLLER PARAMETER GETTERS
 
-    pub fn get_controller_params(&self, sub_code: ControllerParamSubCommand) -> io::Result<Vec<u8>> {
+    fn get_controller_params_inner(&self, sub_code: ControllerParamSubCommand) -> io::Result<Vec<u8>> {
         self.send(Command::GetControllerParams, &[sub_code as u8])
     }
 
-    // TODO more getters
+    pub fn get_controller_params<T>(&self, sub_code: ControllerParamSubCommand) -> Result<T> where T: Response<T>{
+        let raw = self.get_controller_params_inner(sub_code)?;
+        T::decode(&raw)
+    }
 
-    pub fn get_controller_options(&self) -> Result<()> {
-        let _raw = self.get_controller_params(ControllerParamSubCommand::ControllerOptionParams)?;
-        // TODO decode
-        Ok(())
+    pub fn get_controller_options(&self) -> Result<ControllerOptionsResponse> {
+        self.get_controller_params(ControllerParamSubCommand::ControllerOptionParams)
     }
 
     pub fn get_reader_serial_number(&self) -> Result<SerialNumberResponse> {
-        let raw = self.get_controller_params(ControllerParamSubCommand::ContorllerSerialNumber)?;
-        SerialNumberResponse::decode(&raw)
+        self.get_controller_params(ControllerParamSubCommand::ContorllerSerialNumber)
     }
 
     pub fn get_relay_delay_time(&self) -> Result<RelayDelayResponse> {
-        let raw = self.get_controller_params(ControllerParamSubCommand::RelayDelayTime)?;
-        RelayDelayResponse::decode(&raw)
+        self.get_controller_params(ControllerParamSubCommand::RelayDelayTime)
     }
 
     pub fn get_controller_edit_password(&self) -> Result<EditPasswordResponse> {
-        let raw = self.get_controller_params(ControllerParamSubCommand::ControllerEditPassword)?;
-        EditPasswordResponse::decode(&raw)
+        self.get_controller_params(ControllerParamSubCommand::ControllerEditPassword)
     }
 
     //*** CONTROLLER PARAMETER SETTERS
