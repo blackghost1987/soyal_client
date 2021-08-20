@@ -1,9 +1,10 @@
-use serde::{Serialize, Deserialize};
-
 use crate::api_types::*;
-use macaddr::MacAddr6;
-use std::net::Ipv4Addr;
+
+use chrono::{DateTime, Local, TimeZone};
 use enum_primitive::FromPrimitive;
+use macaddr::MacAddr6;
+use serde::{Serialize, Deserialize};
+use std::net::Ipv4Addr;
 use std::ops::BitXorAssign;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -391,7 +392,7 @@ pub struct EventLogResponse {
     pub destination_id: u8,
     pub function_code: EventFunctionCode,
     pub source: u8,
-    // pub timestamp: DateTime, // TODO implement
+    pub timestamp: DateTime<Local>,
     pub port_number: PortNumber,
     pub user_address_or_tag_id: u16,
     pub tag_id_for_normal_access: u32,
@@ -414,7 +415,14 @@ impl Response<EventLogResponse> for EventLogResponse {
 
         let source = data[0];
 
-        //let timestamp = data[1..8]; // TODO decode
+        let year = 2000 + data[7] as i32;
+        let month = data[6] as u32;
+        let day = data[5] as u32;
+        let hour = data[3] as u32;
+        let minute = data[2] as u32;
+        let second = data[1] as u32;
+        let timestamp = Local.ymd(year, month, day).and_hms(hour, minute, second);
+
         let port_number = PortNumber::from_u8(data[8]).ok_or(ProtocolError::UnknownPortNumber)?;
 
         let user_address_or_tag_id = u16::from_be_bytes([data[9], data[10]]);
@@ -433,6 +441,7 @@ impl Response<EventLogResponse> for EventLogResponse {
             destination_id,
             function_code,
             source,
+            timestamp,
             port_number,
             user_address_or_tag_id,
             tag_id_for_normal_access,
