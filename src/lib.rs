@@ -111,16 +111,20 @@ impl SoyalClient {
         ControllerStatusResponse::decode(&raw)
     }
 
-    pub fn get_oldest_event_log(&self) -> Result<()> {
-        let _raw = self.send(Command::GetOldestEventLog, &[])?;
+    fn get_event_log_inner(&self, data: &[u8]) -> Result<Option<EventLogResponse>> {
+        let _raw = self.send(Command::GetOldestEventLog, data)?;
         // TODO handle ACK (if no log) OR DATA
-        // TODO decode event log
-        Ok(())
+        // TODO decode EventLogResponse
+        Ok(None)
+    }
+
+    pub fn get_oldest_event_log(&self) -> Result<Option<EventLogResponse>> {
+        self.get_event_log_inner(&[])
     }
 
     /// RecordID max value is 0xFFFFFE = 16777214
     /// Version 2.07 and later
-    pub fn get_specific_event_log(&self, record_id: u32) -> Result<()> {
+    pub fn get_specific_event_log(&self, record_id: u32) -> Result<Option<EventLogResponse>> {
         if record_id > EVENT_LOG_MAX_ID {
             return Err(ProtocolError::EventLogOutOfRange.into());
         }
@@ -129,18 +133,13 @@ impl SoyalClient {
         let b1 = (record_id & 0x0000FF00 >> 8) as u8;
         let b2 = (record_id & 0x000000FF) as u8;
 
-        let _raw = self.send(Command::GetOldestEventLog, &[b0, b1, b2])?;
-        // TODO handle ACK (if no log) OR DATA
-        // TODO decode event log
-        Ok(())
+        get_event_log_inner(&[b0, b1, b2])
     }
 
     /// Version 2.07 and later
-    pub fn get_event_log_status(&self) -> Result<()> {
-        let _raw = self.send(Command::GetOldestEventLog, &[0xFF, 0xFF, 0xFF])?;
-        // TODO decode event log status
-        // ex: LEN DID 03 [event log counter] [Input point of log queue] [Output point of log queue] XOR SUM
-        Ok(())
+    pub fn get_event_log_status(&self) -> Result<EventLogStatusResponse> {
+        let raw = self.send(Command::GetOldestEventLog, &[0xFF, 0xFF, 0xFF])?;
+        EventLogStatusResponse::decode(&raw)
     }
 
     pub fn remove_oldest_event_log(&self) -> Result<()> {

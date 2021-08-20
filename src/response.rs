@@ -8,7 +8,7 @@ use std::ops::BitXorAssign;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EchoResponse<'a> {
-    pub destination_id: u8, // 0x00 Host
+    pub destination_id: u8, // 0x00 == Host (PC)
     pub command: EchoCode,
     pub data: &'a [u8],
 }
@@ -82,7 +82,7 @@ pub trait Response<T> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ControllerStatusResponse {
-    pub destination_id: u8, // 0x00 Host
+    pub destination_id: u8,
     pub function_code: u8,
     pub source: u8,
     pub event_type: u8,
@@ -110,7 +110,7 @@ impl Response<ControllerStatusResponse> for ControllerStatusResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SerialNumberResponse {
-    pub destination_id: u8, // 0x00 Host
+    pub destination_id: u8,
     pub command: EchoCode,
     pub source: u8,
     //pub flash_size_code: ???
@@ -135,7 +135,7 @@ impl Response<SerialNumberResponse> for SerialNumberResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RelayDelayResponse {
-    pub destination_id: u8, // 0x00 Host
+    pub destination_id: u8,
     pub command: EchoCode,
     pub source: u8,
     pub main_port_door_relay_time:    u16, // 10ms
@@ -168,7 +168,7 @@ impl Response<RelayDelayResponse> for RelayDelayResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditPasswordResponse {
-    pub destination_id: u8, // 0x00 Host
+    pub destination_id: u8,
     pub command: EchoCode,
     // FIXME maybe there's a source param here as well? are there dangling data?
     pub password: u32,
@@ -190,7 +190,7 @@ impl Response<EditPasswordResponse> for EditPasswordResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ControllerOptionsResponse {
-    pub destination_id: u8, // 0x00 Host
+    pub destination_id: u8,
     pub command: EchoCode,
     pub source: u8,
     pub controller_type: ControllerType,
@@ -290,7 +290,7 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IpAndMacAddressResponse {
-    pub destination_id: u8, // 0x00 Host
+    pub destination_id: u8,
     pub command: EchoCode,
     pub mac_address: MacAddr6,
     pub ip_address:  Ipv4Addr,
@@ -334,7 +334,7 @@ impl Response<IpAndMacAddressResponse> for IpAndMacAddressResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RemoteTCPServerParamsResponse {
-    pub destination_id: u8, // 0x00 Host
+    pub destination_id: u8,
     pub command: EchoCode,
     pub first_remote_address: Ipv4Addr,
     pub first_remote_port: u16,
@@ -364,8 +364,31 @@ impl Response<RemoteTCPServerParamsResponse> for RemoteTCPServerParamsResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventLogStatusResponse {
+    pub destination_id: u8,
+    pub command: EchoCode,
+    pub event_log_counter:  u8,
+    pub queue_input_point:  u8,
+    pub queue_output_point: u8,
+}
+
+impl Response<EventLogStatusResponse> for EventLogStatusResponse {
+    fn decode(raw: &Vec<u8>) -> Result<EventLogStatusResponse> {
+        let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
+        let data = parts.data;
+        Ok(EventLogStatusResponse {
+            destination_id: parts.destination_id,
+            command: parts.command,
+            event_log_counter:  data[0],
+            queue_input_point:  data[1],
+            queue_output_point: data[2],
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventLogResponse {
-    pub destination_id: u8, // 0x00 Host
+    pub destination_id: u8,
     pub function_code: EventFunctionCode,
     pub source: u8,
     //pub timestamp: DateTime, // TODO implement
