@@ -46,7 +46,7 @@ fn test_get_edit_pass() {
 }
 
 #[test]
-//#[ignore]
+#[ignore]
 fn test_get_relay_delays() {
     let client = create_client();
     let res = client.get_relay_delay_time();
