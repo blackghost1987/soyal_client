@@ -6,11 +6,16 @@ use serde::{Serialize, Deserialize};
 
 pub const EXTENDED_HEADER: [u8; 4] = [0xFF, 0x00, 0x5A, 0xA5];
 
+/// RecordID is u24 and 0xFFFFFF is used for status, so max value is 0xFFFFFE = 16777214
+pub const EVENT_LOG_MAX_ID: u32 = 16777214;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ProtocolError {
     UnknownEventType,
     UnknownCommandCode,
     UnknownControllerType,
+    UnknownEventFunctionCode,
+    UnknownPortNumber,
     MessageTooShort,
     MessageLengthMismatch,
     UnexpectedHeaderValue,
@@ -19,6 +24,7 @@ pub enum ProtocolError {
     UnexpectedCommandCode,
     BadXorValue,
     BadChecksumValue,
+    EventLogOutOfRange,
 }
 
 #[derive(Debug)]
@@ -389,6 +395,15 @@ pub enum EventFunctionCode {
     AccessViaVeinReject              = 101,
     InhibitedByInternalLockLocked    = 102,
     FireAlarmInputTriggered          = 104,
+}
+}
+
+enum_from_primitive! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum PortNumber {
+    MainPort     = 17,
+    WeigandPort1 = 18,
+    WeigandPort2 = 19,
 }
 }
 

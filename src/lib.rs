@@ -118,6 +118,31 @@ impl SoyalClient {
         Ok(())
     }
 
+    /// RecordID max value is 0xFFFFFE = 16777214
+    /// Version 2.07 and later
+    pub fn get_specific_event_log(&self, record_id: u32) -> Result<()> {
+        if record_id > EVENT_LOG_MAX_ID {
+            return Err(ProtocolError::EventLogOutOfRange.into());
+        }
+
+        let b0 = (record_id & 0x00FF0000 >> 16) as u8;
+        let b1 = (record_id & 0x0000FF00 >> 8) as u8;
+        let b2 = (record_id & 0x000000FF) as u8;
+
+        let _raw = self.send(Command::GetOldestEventLog, &[b0, b1, b2])?;
+        // TODO handle ACK (if no log) OR DATA
+        // TODO decode event log
+        Ok(())
+    }
+
+    /// Version 2.07 and later
+    pub fn get_event_log_status(&self) -> Result<()> {
+        let _raw = self.send(Command::GetOldestEventLog, &[0xFF, 0xFF, 0xFF])?;
+        // TODO decode event log status
+        // ex: LEN DID 03 [event log counter] [Input point of log queue] [Output point of log queue] XOR SUM
+        Ok(())
+    }
+
     pub fn remove_oldest_event_log(&self) -> Result<()> {
         let _raw = self.send(Command::RemoveOldestEventLog, &[])?;
         // TODO handle ACK / NACK

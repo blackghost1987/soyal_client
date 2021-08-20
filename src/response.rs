@@ -363,6 +363,64 @@ impl Response<RemoteTCPServerParamsResponse> for RemoteTCPServerParamsResponse {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventLogResponse {
+    pub destination_id: u8, // 0x00 Host
+    pub function_code: EventFunctionCode,
+    pub source: u8,
+    //pub timestamp: DateTime, // TODO implement
+    pub port_number: PortNumber,
+    pub user_address_or_tag_id: u16,
+    pub tag_id_for_normal_access: u32,
+    //Sub Code
+    //Sub Func.
+    //Ext Code
+    //User level
+    pub door_number: u8,
+    pub sor_deduction_amount: u16,
+    pub sor_balance: u16,
+    pub user_inputted_code: Option<u32>,
+}
+
+impl Response<EventLogResponse> for EventLogResponse {
+    fn decode(raw: &Vec<u8>) -> Result<EventLogResponse> {
+        let msg = Self::get_message_part(raw)?;
+        let destination_id = msg[0];
+        let function_code = EventFunctionCode::from_u8(msg[1]).ok_or(ProtocolError::BadChecksumValue)?;
+        let data = &msg[2..];
+
+        let source = data[0];
+
+        //let timestamp = data[1..8];
+        let port_number = PortNumber::from_u8(data[8]).ok_or(ProtocolError::UnknownPortNumber)?;
+
+        let user_address_or_tag_id = u16::from_be_bytes([data[9], data[10]]);
+        let tag_id_for_normal_access = u32::from_be_bytes([data[15], data[16], data[19], data[20]]);
+
+        let door_number = data[17];
+
+        let sor_deduction_amount = u16::from_be_bytes([data[21], data[22]]);
+        let sor_balance          = u16::from_be_bytes([data[23], data[24]]);
+
+        let user_inputted_code = if function_code == EventFunctionCode::InvalidUserPIN {
+            Some(u32::from_be_bytes([data[25], data[26], data[27], data[28]]))
+        } else { None };
+
+        Ok(EventLogResponse {
+            destination_id,
+            function_code,
+            source,
+            port_number,
+            user_address_or_tag_id,
+            tag_id_for_normal_access,
+            door_number,
+            sor_deduction_amount,
+            sor_balance,
+            user_inputted_code,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
