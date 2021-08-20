@@ -3,6 +3,7 @@ use std::convert;
 use std::result;
 
 use serde::{Serialize, Deserialize};
+use chrono::{Date, Local, DateTime, TimeZone};
 
 pub const EXTENDED_HEADER: [u8; 4] = [0xFF, 0x00, 0x5A, 0xA5];
 
@@ -405,6 +406,59 @@ pub enum PortNumber {
     WeigandPort1 = 18,
     WeigandPort2 = 19,
 }
+}
+
+pub struct UserMode {
+    pub access_mode: AccessMode,
+    pub patrol_card: bool,
+    pub expire_check: bool,
+    pub anti_pass_back_control: bool,
+    pub password_change_available: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct UserParameters {
+    pub tag_uid: u64,
+    pub pin_code: u32,
+    pub mode: UserMode,
+    pub zone: u8,
+    pub available_doors_bitmap: u16,
+    pub last_allowed_date: chrono::Date<Local>,
+    pub level: u8,
+    pub enable_anti_pass_back_check: bool,
+}
+
+impl UserParameters {
+    pub fn decode(data: &[u8]) -> Result<UserParameters> {
+        if data.len() < 24 {
+            return Err(ProtocolError::NotEnoughData.into());
+        }
+
+        let tag_uid = u64::from_be_bytes([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]]);
+        let pin_code = u32::from_be_bytes([data[8], data[9], data[10], data[11]]);
+        let mode = UserMode::decode(data[12]);
+        let zone = data[13];
+        let available_doors_bitmap = u16::from_be_bytes([data[14], data[15]]);
+
+        let year = 2000 + data[16] as i32;
+        let month = data[17] as u32;
+        let day = data[18] as u32;
+        let last_allowed_date = Local.ymd(year, month, day);
+
+        let level = data[19];
+        let enable_anti_pass_back_check = data[20] & 0b1000000 != 0;
+
+        Ok(UserParameters {
+            tag_uid,
+            pin_code,
+            mode,
+            zone,
+            available_doors_bitmap,
+            last_allowed_date,
+            level,
+            enable_anti_pass_back_check,
+        })
+    }
 }
 
 #[cfg(test)]

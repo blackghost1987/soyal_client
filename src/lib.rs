@@ -129,11 +129,8 @@ impl SoyalClient {
             return Err(ProtocolError::EventLogOutOfRange.into());
         }
 
-        let b0 = (record_id & 0x00FF0000 >> 16) as u8;
-        let b1 = (record_id & 0x0000FF00 >> 8) as u8;
-        let b2 = (record_id & 0x000000FF) as u8;
-
-        self.get_event_log_inner(&[b0, b1, b2])
+        let bytes = record_id.to_be_bytes();
+        self.get_event_log_inner(&[bytes[1], bytes[2], bytes[3]])
     }
 
     /// Version 2.07 and later
@@ -154,7 +151,14 @@ impl SoyalClient {
         Ok(())
     }
 
-    // TODO Get User Parameters (0x87)
+    pub fn get_user_parameters(&self, user_address: u16, continue_number_of_cards: u8) -> Result<()> {
+        let mut data = user_address.to_be_bytes().to_vec();
+        data.push(continue_number_of_cards);
+        let _raw = self.send(Command::GetUserParams, &data)?;
+        // TODO decode
+        Ok(())
+    }
+
     // TODO Set User Parameters (0x83/0x84)
 
     // TODO Relay On/Off control (0x21)

@@ -453,6 +453,34 @@ impl Response<EventLogResponse> for EventLogResponse {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserParametersResponse {
+    pub destination_id: u8,
+    pub command: EchoCode,
+    pub source: u8,
+    pub user_parameters_1: UserParameters,
+    pub user_parameters_2: UserParameters,
+}
+
+impl Response<UserParametersResponse> for UserParametersResponse {
+    fn decode(raw: &Vec<u8>) -> Result<UserParametersResponse> {
+        let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
+        let data = parts.data;
+        let source = data[0];
+
+        let user_parameters_1 = UserParameters::decode(&data[1..25]);
+        let user_parameters_2 = UserParameters::decode(&data[25..49]);
+
+        Ok(UserParametersResponse {
+            destination_id: parts.destination_id,
+            command: parts.command,
+            source,
+            user_parameters_1,
+            user_parameters_2,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
