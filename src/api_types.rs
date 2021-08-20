@@ -3,7 +3,7 @@ use std::convert;
 use std::result;
 
 use serde::{Serialize, Deserialize};
-use chrono::{Date, Local, DateTime, TimeZone};
+use chrono::NaiveDate;
 
 pub const EXTENDED_HEADER: [u8; 4] = [0xFF, 0x00, 0x5A, 0xA5];
 
@@ -74,9 +74,28 @@ pub enum ControllerType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AccessMode {
+pub enum ControllerAccessMode {
     PinOnly,           // Mode 8: 4 digit PIN
     UserAddressAndPin, // Mode 4: 5 digit address + 4 digit PIN
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum UserAccessMode {
+    Invalid,
+    ReadOnly,
+    CardOrPIN,
+    CardPlusPin,
+}
+
+impl UserAccessMode {
+    pub fn decode(msb: bool, lsb: bool) -> UserAccessMode {
+        match (msb, lsb) {
+            (false, false) => UserAccessMode::Invalid,
+            (false, true)  => UserAccessMode::ReadOnly,
+            (true, false)  => UserAccessMode::CardOrPIN,
+            (true, true)   => UserAccessMode::CardPlusPin,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -408,12 +427,28 @@ pub enum PortNumber {
 }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UserMode {
-    pub access_mode: AccessMode,
+    pub access_mode: UserAccessMode,
     pub patrol_card: bool,
     pub expire_check: bool,
     pub anti_pass_back_control: bool,
     pub password_change_available: bool,
+}
+
+impl UserMode {
+    pub fn decode(data: u8) -> UserMode {
+        let access_mode_msb = data & 0b1000000 != 0;
+        let access_mode_lsb = data & 0b0100000 != 0;
+
+        UserMode {
+            access_mode: UserAccessMode::decode(access_mode_msb, access_mode_lsb),
+            patrol_card:               data & 0b00100000 != 0,
+            expire_check:              data & 0b00000100 != 0,
+            anti_pass_back_control:    data & 0b00000010 != 0,
+            password_change_available: data & 0b00000001 != 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -423,7 +458,7 @@ pub struct UserParameters {
     pub mode: UserMode,
     pub zone: u8,
     pub available_doors_bitmap: u16,
-    pub last_allowed_date: chrono::Date<Local>,
+    pub last_allowed_date: NaiveDate,
     pub level: u8,
     pub enable_anti_pass_back_check: bool,
 }
@@ -443,7 +478,7 @@ impl UserParameters {
         let year = 2000 + data[16] as i32;
         let month = data[17] as u32;
         let day = data[18] as u32;
-        let last_allowed_date = Local.ymd(year, month, day);
+        let last_allowed_date = NaiveDate::from_ymd(year, month, day);
 
         let level = data[19];
         let enable_anti_pass_back_check = data[20] & 0b1000000 != 0;

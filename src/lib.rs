@@ -151,12 +151,11 @@ impl SoyalClient {
         Ok(())
     }
 
-    pub fn get_user_parameters(&self, user_address: u16, continue_number_of_cards: u8) -> Result<()> {
+    pub fn get_user_parameters(&self, user_address: u16, continue_number_of_cards: u8) -> Result<UserParametersResponse> {
         let mut data = user_address.to_be_bytes().to_vec();
         data.push(continue_number_of_cards);
-        let _raw = self.send(Command::GetUserParams, &data)?;
-        // TODO decode
-        Ok(())
+        let raw = self.send(Command::GetUserParams, &data)?;
+        UserParametersResponse::decode(&raw)
     }
 
     // TODO Set User Parameters (0x83/0x84)
