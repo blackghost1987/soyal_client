@@ -263,7 +263,7 @@ impl NewCardPresentData {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct KeypadEventData {
-    // TODO implement
+    // TODO implement KeypadEventData
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

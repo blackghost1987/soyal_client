@@ -202,22 +202,22 @@ pub struct ControllerOptionsResponse {
     pub general_password:        u16,
     pub duress_code:             u16,
     //pub connected_reader_bitmask: ??? // AR721Ev2 only
-    tag_hold_time:                u16, // 10ms
-    main_port_door_relay_time:    u16, // 10ms
-    weigand_port_door_relay_time: u16, // 10ms
-    alarm_relay_time:             u16, // 10ms
-    main_port_options:             ControllerOptions,
-    weigand_port_options:          ControllerOptions,
-    main_port_extended_options:    ExtendedControllerOptions,
-    weigand_port_extended_options: ExtendedControllerOptions,
-    main_port_door_close_time:    u8, // seconds
-    weigand_port_door_close_time: u8, // seconds
-    main_port_arming:    bool,
-    weigand_port_arming: bool,
-    // access_mode: AccessMode, // TODO implement
-    armed_output_pulse_width: u8, // 10 ms
-    arming_delay: u8, // seconds
-    alarm_delay:  u8, // seconds
+    pub tag_hold_time:                u16, // 10ms
+    pub main_port_door_relay_time:    u16, // 10ms
+    pub weigand_port_door_relay_time: u16, // 10ms
+    pub alarm_relay_time:             u16, // 10ms
+    pub main_port_options:             ControllerOptions,
+    pub weigand_port_options:          ControllerOptions,
+    pub main_port_extended_options:    ExtendedControllerOptions,
+    pub weigand_port_extended_options: ExtendedControllerOptions,
+    pub main_port_door_close_time:    u8, // seconds
+    pub weigand_port_door_close_time: u8, // seconds
+    pub main_port_arming:    bool,
+    pub weigand_port_arming: bool,
+    // pub access_mode: AccessMode, // TODO implement
+    pub armed_output_pulse_width: u8, // 10 ms
+    pub arming_delay: u8, // seconds
+    pub alarm_delay:  u8, // seconds
     // Data43: UART2 / UART3
     // Data44: CommonOptions
     // Data45: DisplayOptions
@@ -391,14 +391,14 @@ pub struct EventLogResponse {
     pub destination_id: u8,
     pub function_code: EventFunctionCode,
     pub source: u8,
-    //pub timestamp: DateTime, // TODO implement
+    // pub timestamp: DateTime, // TODO implement
     pub port_number: PortNumber,
     pub user_address_or_tag_id: u16,
     pub tag_id_for_normal_access: u32,
-    //Sub Code
-    //Sub Func.
-    //Ext Code
-    //User level
+    // Sub Code
+    // Sub Func.
+    // Ext Code
+    // User level
     pub door_number: u8,
     pub sor_deduction_amount: u16,
     pub sor_balance: u16,
@@ -414,7 +414,7 @@ impl Response<EventLogResponse> for EventLogResponse {
 
         let source = data[0];
 
-        //let timestamp = data[1..8];
+        //let timestamp = data[1..8]; // TODO decode
         let port_number = PortNumber::from_u8(data[8]).ok_or(ProtocolError::UnknownPortNumber)?;
 
         let user_address_or_tag_id = u16::from_be_bytes([data[9], data[10]]);

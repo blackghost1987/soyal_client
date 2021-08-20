@@ -99,7 +99,7 @@ impl SoyalClient {
 
     //*** CONTROLLER PARAMETER SETTERS
 
-    // TODO try to add data
+    // TODO try to set some data (with something more simple maybe?)
     pub fn set_controller_params(&self, sub_code: u8) -> io::Result<Vec<u8>> {
         self.send(Command::SetControllerParams, &[sub_code])
     }
@@ -114,7 +114,7 @@ impl SoyalClient {
     fn get_event_log_inner(&self, data: &[u8]) -> Result<Option<EventLogResponse>> {
         let _raw = self.send(Command::GetOldestEventLog, data)?;
         // TODO handle ACK (if no log) OR DATA
-        // TODO decode EventLogResponse
+        //EventLogStatusResponse::decode(raw)
         Ok(None)
     }
 
@@ -133,7 +133,7 @@ impl SoyalClient {
         let b1 = (record_id & 0x0000FF00 >> 8) as u8;
         let b2 = (record_id & 0x000000FF) as u8;
 
-        get_event_log_inner(&[b0, b1, b2])
+        self.get_event_log_inner(&[b0, b1, b2])
     }
 
     /// Version 2.07 and later
