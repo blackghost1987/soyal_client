@@ -75,9 +75,9 @@ impl SoyalClient {
         self.get_controller_params(ControllerParamSubCommand::ControllerOptionParams)
     }
 
-    pub fn get_remote_tcp_server_params(&self) -> Result<RemoteTCPServerParamsResponse> {
+    /*pub fn get_remote_tcp_server_params(&self) -> Result<RemoteTCPServerParamsResponse> {
         self.get_controller_params(ControllerParamSubCommand::RemoteTCPServerParams)
-    }
+    }*/
 
     pub fn get_ip_and_mac_address(&self) -> Result<IpAndMacAddressResponse> {
         self.get_controller_params(ControllerParamSubCommand::IpAndMacAddress)

@@ -2,6 +2,8 @@ use serde::{Serialize, Deserialize};
 
 use crate::api_types::*;
 use std::convert::TryFrom;
+use macaddr::MacAddr6;
+use std::net::Ipv4Addr;
 
 pub trait Response<T> {
     fn decode(raw: &Vec<u8>) -> Result<T>;
@@ -277,6 +279,54 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
        })
     }
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IpAndMacAddressResponse {
+    pub destination_id: u8, // 0x00 Host
+    pub command: u8,
+    pub mac_address: MacAddr6,
+    pub ip_address:  Ipv4Addr,
+    pub subnet_mask: Ipv4Addr,
+    pub gateway_address: Ipv4Addr,
+    pub tcp_port: u16,
+    pub primary_dns:   Ipv4Addr,
+    pub secondary_dns: Ipv4Addr,
+    pub http_server_port: u16,
+}
+
+impl Response<IpAndMacAddressResponse> for IpAndMacAddressResponse {
+    fn decode(raw: &Vec<u8>) -> Result<IpAndMacAddressResponse> {
+        let msg = Self::get_message_part(raw)?;
+        let destination_id = msg[0];
+        let command = msg[1];
+        assert_eq!(command, 3, "Getter Response command should be 0x03");
+        let data = &msg[2..];
+
+        let mac_address      = MacAddr6::new(data[0], data[1], data[2], data[3], data[4], data[5]);
+        let ip_address       = Ipv4Addr::new(data[6], data[7], data[8], data[9]);
+        let subnet_mask      = Ipv4Addr::new(data[10], data[11], data[12], data[13]);
+        let gateway_address  = Ipv4Addr::new(data[14], data[15], data[16], data[17]);
+        let tcp_port         = u16::from_be_bytes([data[18], data[19]]);
+        let primary_dns      = Ipv4Addr::new(data[20], data[21], data[22], data[23]);
+        let secondary_dns    = Ipv4Addr::new(data[24], data[25], data[26], data[27]);
+        let http_server_port = u16::from_be_bytes([data[28], data[29]]);
+
+        Ok(IpAndMacAddressResponse {
+            destination_id,
+            command,
+            mac_address,
+            ip_address,
+            subnet_mask,
+            gateway_address,
+            tcp_port,
+            primary_dns,
+            secondary_dns,
+            http_server_port,
+        })
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
