@@ -3,6 +3,7 @@ use std::ops::BitXorAssign;
 
 use crate::api_types::*;
 
+enum_from_primitive! {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Command {
     GetControllerParams  = 0x12,
@@ -31,7 +32,9 @@ pub enum Command {
     FingerprintOrVein    = 0x8F,
     BlackUIDManagement   = 0x90,
 }
+}
 
+enum_from_primitive! {
 pub enum ControllerParamSubCommand {
     ControllerOptionParams = 0x00,
     AutoOpenTimeZone       = 0x01,
@@ -52,7 +55,7 @@ pub enum ControllerParamSubCommand {
     ControllerAccessMode   = 0x19,
     RS485ReaderStatus      = 0x81, // read-only
     ContorllerSerialNumber = 0xFE, // read-only
-
+}
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

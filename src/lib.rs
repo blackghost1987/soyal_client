@@ -1,3 +1,5 @@
+#[macro_use] extern crate enum_primitive;
+
 pub mod api_types;
 pub mod response;
 pub mod request;
@@ -75,9 +77,9 @@ impl SoyalClient {
         self.get_controller_params(ControllerParamSubCommand::ControllerOptionParams)
     }
 
-    /*pub fn get_remote_tcp_server_params(&self) -> Result<RemoteTCPServerParamsResponse> {
+    pub fn get_remote_tcp_server_params(&self) -> Result<RemoteTCPServerParamsResponse> {
         self.get_controller_params(ControllerParamSubCommand::RemoteTCPServerParams)
-    }*/
+    }
 
     pub fn get_ip_and_mac_address(&self) -> Result<IpAndMacAddressResponse> {
         self.get_controller_params(ControllerParamSubCommand::IpAndMacAddress)
@@ -104,9 +106,9 @@ impl SoyalClient {
 
     //*** GENERIC COMMANDS
 
-    pub fn get_reader_status(&self) -> Result<EchoResponse> {
+    pub fn get_reader_status(&self) -> Result<ControllerStatusResponse> {
         let raw = self.send(Command::HostingPolling, &[])?;
-        EchoResponse::decode(&raw)
+        ControllerStatusResponse::decode(&raw)
     }
 
     pub fn get_oldest_event_log(&self) -> Result<()> {

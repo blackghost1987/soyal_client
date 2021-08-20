@@ -9,11 +9,14 @@ pub const EXTENDED_HEADER: [u8; 4] = [0xFF, 0x00, 0x5A, 0xA5];
 #[derive(Debug, Clone, PartialEq)]
 pub enum ProtocolError {
     UnknownEventType,
+    UnknownCommandCode,
+    UnknownControllerType,
     MessageTooShort,
     MessageLengthMismatch,
     UnexpectedHeaderValue,
     UnexpectedFirstHeaderByte,
     NotEnoughData,
+    UnexpectedCommandCode,
 }
 
 #[derive(Debug)]
@@ -159,7 +162,7 @@ pub struct AllKeysPressedData {
     pub input_value: u16,
     pub device_params: ControllerOptions,
     //elevator_controller_params: ElevatorControllerParams, // 401RO16’s parameter (24*xxx#) // TODO implement
-    //key_data: KeyData, TODO implement
+    //key_data: KeyData, // TODO implement
 }
 
 impl AllKeysPressedData {
@@ -225,44 +228,44 @@ pub struct KeypadEventData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum EchoEvent {
+pub enum ControllerStatus {
     IoStatus(IoStatusData),
     AllKeysPressed(AllKeysPressedData), // 4 or 5 keys pressed (depends on Mode 4 v. 8)
     NewCardPresent(NewCardPresentData),
     KeypadEvent(KeypadEventData), // some keys pressed
 }
 
-impl convert::From<IoStatusData> for EchoEvent {
-    fn from(e: IoStatusData) -> EchoEvent {
-        EchoEvent::IoStatus(e)
+impl convert::From<IoStatusData> for ControllerStatus {
+    fn from(e: IoStatusData) -> ControllerStatus {
+        ControllerStatus::IoStatus(e)
     }
 }
 
-impl convert::From<AllKeysPressedData> for EchoEvent {
-    fn from(e: AllKeysPressedData) -> EchoEvent {
-        EchoEvent::AllKeysPressed(e)
+impl convert::From<AllKeysPressedData> for ControllerStatus {
+    fn from(e: AllKeysPressedData) -> ControllerStatus {
+        ControllerStatus::AllKeysPressed(e)
     }
 }
 
-impl convert::From<NewCardPresentData> for EchoEvent {
-    fn from(e: NewCardPresentData) -> EchoEvent {
-        EchoEvent::NewCardPresent(e)
+impl convert::From<NewCardPresentData> for ControllerStatus {
+    fn from(e: NewCardPresentData) -> ControllerStatus {
+        ControllerStatus::NewCardPresent(e)
     }
 }
 
-impl convert::From<KeypadEventData> for EchoEvent {
-    fn from(e: KeypadEventData) -> EchoEvent {
-        EchoEvent::KeypadEvent(e)
+impl convert::From<KeypadEventData> for ControllerStatus {
+    fn from(e: KeypadEventData) -> ControllerStatus {
+        ControllerStatus::KeypadEvent(e)
     }
 }
 
-impl EchoEvent {
-    pub fn decode(event_type: u8, data: &[u8]) -> Result<EchoEvent> {
+impl ControllerStatus {
+    pub fn decode(event_type: u8, data: &[u8]) -> Result<ControllerStatus> {
         match event_type {
-            0x00 => IoStatusData::decode(data).map(EchoEvent::from),
-            0x01 => AllKeysPressedData::decode(data).map(EchoEvent::from),
-            0x02 => NewCardPresentData::decode(data).map(EchoEvent::from),
-            0x06 => Ok(EchoEvent::KeypadEvent(KeypadEventData {})),
+            0x00 => IoStatusData::decode(data).map(ControllerStatus::from),
+            0x01 => AllKeysPressedData::decode(data).map(ControllerStatus::from),
+            0x02 => NewCardPresentData::decode(data).map(ControllerStatus::from),
+            0x06 => Ok(ControllerStatus::KeypadEvent(KeypadEventData {})),
             _ => Err(ProtocolError::UnknownEventType.into()),
         }
     }
