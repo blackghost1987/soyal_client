@@ -17,6 +17,8 @@ pub enum ProtocolError {
     UnexpectedFirstHeaderByte,
     NotEnoughData,
     UnexpectedCommandCode,
+    BadXorValue,
+    BadChecksumValue,
 }
 
 #[derive(Debug)]

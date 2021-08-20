@@ -4,6 +4,7 @@ use crate::api_types::*;
 use macaddr::MacAddr6;
 use std::net::Ipv4Addr;
 use enum_primitive::FromPrimitive;
+use std::ops::BitXorAssign;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EchoResponse<'a> {
@@ -39,11 +40,27 @@ pub trait Response<T> {
         // ignore the first 2 length bytes
         let raw_msg = &non_header[2..];
 
-        let _sum = raw_msg.get(msg_length-1).expect("Missing sum value");
-        let _xor = raw_msg.get(msg_length-2).expect("Missing xor value");
-        // TODO validate xor and sum
+        // get and test XOR and SUM values
+        let sum = raw_msg.get(msg_length-1).expect("Missing sum value");
+        let xor = raw_msg.get(msg_length-2).expect("Missing xor value");
 
-        // ignore the last two xor/sum bytes
+        let mut xor_res: u8 = 0xFF;
+        for d in &raw_msg[..msg_length-2] {
+            xor_res.bitxor_assign(d);
+        }
+        if xor_res != *xor {
+            return Err(ProtocolError::BadXorValue.into());
+        }
+
+        let mut sum_res: u8 = 0;
+        for d in &raw_msg[..msg_length-1] {
+            sum_res = sum_res.wrapping_add(*d);
+        }
+        if sum_res != *sum {
+            return Err(ProtocolError::BadChecksumValue.into());
+        }
+
+        // ignore the last two XOR/SUM bytes
         Ok(&raw_msg[0..msg_length-2])
     }
 
@@ -442,4 +459,6 @@ mod tests {
             }));
         }
     }
+
+    // TODO TEST ControllerOptionsResponse
 }
