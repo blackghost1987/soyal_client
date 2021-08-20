@@ -39,6 +39,37 @@ impl convert::From<ProtocolError> for ClientError {
 
 pub type Result<T> = result::Result<T, ClientError>;
 
+enum_from_primitive! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum EchoCode {
+    RequestedData               = 0x03,
+    CommandAcknowledged         = 0x04,
+    CommandUnacknowledged       = 0x05,
+    AuthenticationFailed        = 0x06,
+    NoTagsPresented             = 0x07,
+    NotLogin                    = 0x08,
+    CRCError                    = 0x09,
+    NotAuthenticated            = 0x0A,
+    AuthenticationLayerRejected = 0x0B,
+}
+}
+
+enum_from_primitive! {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ControllerType {
+    AR881E    = 0xC0,
+    AR725Ev2  = 0xC1,
+    AR829Ev5  = 0xC2,
+    AR821EFv5 = 0xC3,
+}
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AccessMode {
+    PinOnly,           // Mode 8: 4 digit PIN
+    UserAddressAndPin, // Mode 4: 5 digit address + 4 digit PIN
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StatusData {
     pub keypad_locked: bool,

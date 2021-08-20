@@ -5,21 +5,6 @@ use macaddr::MacAddr6;
 use std::net::Ipv4Addr;
 use enum_primitive::FromPrimitive;
 
-enum_from_primitive! {
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum EchoCode {
-    RequestedData               = 0x03,
-    CommandAcknowledged         = 0x04,
-    CommandUnacknowledged       = 0x05,
-    AuthenticationFailed        = 0x06,
-    NoTagsPresented             = 0x07,
-    NotLogin                    = 0x08,
-    CRCError                    = 0x09,
-    NotAuthenticated            = 0x0A,
-    AuthenticationLayerRejected = 0x0B,
-}
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EchoResponse<'a> {
     pub destination_id: u8, // 0x00 Host
@@ -184,22 +169,6 @@ impl Response<EditPasswordResponse> for EditPasswordResponse {
             password,
         })
     }
-}
-
-enum_from_primitive! {
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ControllerType {
-    AR881E    = 0xC0,
-    AR725Ev2  = 0xC1,
-    AR829Ev5  = 0xC2,
-    AR821EFv5 = 0xC3,
-}
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AccessMode {
-    PinOnly,           // Mode 8: 4 digit PIN
-    UserAddressAndPin, // Mode 4: 5 digit address + 4 digit PIN
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
