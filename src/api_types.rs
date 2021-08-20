@@ -304,6 +304,93 @@ impl ControllerStatus {
     }
 }
 
+enum_from_primitive! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum EventFunctionCode {
+    SiteCodeError                    = 0,
+    InvalidUserPIN                   = 1,
+    KeypadLockedByErrorLimit         = 2,
+    InvalidCard                      = 3,
+    TimeZoneError                    = 4,
+    DoorGroupError                   = 5,
+    ExpiryDate                       = 6,
+    OverAccessTimes                  = 7,
+    PINCodeError                     = 8,
+    PressDuressPB                    = 9,
+    AccessByCardAndPIN               = 10,
+    NormalAccessByTag                = 11,
+    ForceControllerRelayOn           = 12,
+    ForceControllerRelayOff          = 13,
+    ControllerArmed                  = 14,
+    ControllerDisarmed               = 15,
+    Egress                           = 16,
+    AlarmEvent                       = 17,
+    //18
+    //19
+    ControllerPowerOff               = 20,
+    Duress                           = 21,
+    GuardsForHelp                    = 22,
+    CleanerAccess                    = 23,
+    ControllerPowerOn                = 24,
+    ForceControllerRelayError        = 25,
+    ReaderReturnToNormal             = 26,
+    HelpButtonPressed                = 27,
+    AccessByPIN                      = 28,
+    DigitalInputActive               = 29,
+    //30
+    RS485SlaveReaderOffline          = 31,
+    RS485SlaveReaderOnline           = 32,
+    UserPINCodeChanged               = 33,
+    ChangeUserPINError               = 34,
+    EnterAutoDoorOpenProcedure       = 35,
+    ExitAutoDoorOpenProcedure        = 36,
+    AutoDisarmed                     = 37,
+    AutoArmed                        = 38,
+    AccessByFingerprintOrVein        = 39,
+    FingerprintIdentifyFailed        = 40,
+    //41
+    RemoteControlUpKeyPressed        = 42,
+    DisableReader                    = 43,
+    EnableReader                     = 44,
+    RemoteControlPanicKeyPressed     = 45,
+    UserEntranceAtParkingSystem      = 46,
+    UserExitAtParkingSystem          = 47,
+    CounterTriggeredAtParkingSystem  = 48,
+    LatchRelay                       = 49,
+    //50
+    //51
+    //52
+    EnterExitEditMode                = 53,
+    //54
+    FreeAccessModeEnabledDisabled    = 55,
+    AccessViaFingerprintError        = 56,
+    //57
+    //58
+    InhibitCardWhileDoorOpen         = 59,
+    NeverOpenDoorAfterCardAccessed   = 60,
+    //61
+    MifareCardDateTimeReadError      = 62,
+    MifareCardCommandReadError       = 63,
+    MifareCardDeductError            = 64,
+    SORGlobalCardAccessed            = 65,
+    SORDisturberLayerError           = 66,
+    AccessRejectedBeforeBeginDate    = 67,
+    AccessRejectedExpiry             = 68,
+    AccessRejectedCardValueNotEnough = 69,
+    AccessOkAndCardValueDeducted     = 70,
+    AccessOkAndReadLiftDataFailed    = 71,
+    SORGlobalAccessOkAndDeducted     = 72,
+    SORGlobalAccessValueNotEnough    = 73,
+    SORGlobalAccessOkButDeductFailed = 74,
+    SORGlobalAccessWithoutDeducted   = 75,
+    //..
+    BlackTableTagAccessed            = 86,
+    AccessViaVeinOk                  = 100,
+    AccessViaVeinReject              = 101,
+    InhibitedByInternalLockLocked    = 102,
+    FireAlarmInputTriggered          = 104,
+}
+}
 
 #[cfg(test)]
 mod tests {
@@ -333,6 +420,5 @@ mod tests {
             time_attendance_disabled: true
         });
     }
-
 
 }

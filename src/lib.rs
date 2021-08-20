@@ -114,6 +114,7 @@ impl SoyalClient {
     pub fn get_oldest_event_log(&self) -> Result<()> {
         let _raw = self.send(Command::GetOldestEventLog, &[])?;
         // TODO handle ACK (if no log) OR DATA
+        // TODO decode event log
         Ok(())
     }
 
