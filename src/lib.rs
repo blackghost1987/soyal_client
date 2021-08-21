@@ -158,7 +158,16 @@ impl SoyalClient {
         UserParametersResponse::decode(&raw)
     }
 
-    // TODO Set User Parameters (0x83/0x84)
+    pub fn set_user_parameters(&self, user_address: u16, user_params: UserParameters) -> Result<()> {
+        let mut data: Vec<u8> = vec![0x01]; // only sending 1 user data
+        data.extend_from_slice(&user_address.to_be_bytes());
+
+        let user_data = user_params.encode();
+        data.extend_from_slice(&user_data);
+        let _raw = self.send(Command::SetUserParamsWithAntiPassBack, &data)?;
+        // TODO handle ACK / NACK
+        Ok(())
+    }
 
     // TODO Relay On/Off control (0x21)
 }

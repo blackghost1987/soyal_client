@@ -3,7 +3,7 @@ use std::convert;
 use std::result;
 
 use serde::{Serialize, Deserialize};
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Datelike};
 
 pub const EXTENDED_HEADER: [u8; 4] = [0xFF, 0x00, 0x5A, 0xA5];
 
@@ -431,6 +431,8 @@ pub enum PortNumber {
 pub struct UserMode {
     pub access_mode: UserAccessMode,
     pub patrol_card: bool,
+    pub card_omitted_after_fingerprint_rec: bool,
+    pub fingerprint_omitted_after_card_rec: bool,
     pub expire_check: bool,
     pub anti_pass_back_control: bool,
     pub password_change_available: bool,
@@ -443,11 +445,36 @@ impl UserMode {
 
         UserMode {
             access_mode: UserAccessMode::decode(access_mode_msb, access_mode_lsb),
-            patrol_card:               data & 0b00100000 != 0,
-            expire_check:              data & 0b00000100 != 0,
-            anti_pass_back_control:    data & 0b00000010 != 0,
-            password_change_available: data & 0b00000001 != 0,
+            patrol_card:                        data & 0b00100000 != 0,
+            card_omitted_after_fingerprint_rec: data & 0b00010000 != 0,
+            fingerprint_omitted_after_card_rec: data & 0b00001000 != 0,
+            expire_check:                       data & 0b00000100 != 0,
+            anti_pass_back_control:             data & 0b00000010 != 0,
+            password_change_available:          data & 0b00000001 != 0,
         }
+    }
+
+    pub fn encode(&self) -> u8 {
+        0 // TODO implement
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct UserAccessTimeZone {
+    pub weigand_port_same_time_zone: bool,
+    pub user_time_zone: u8, // Zero for free zone control
+}
+
+impl UserAccessTimeZone {
+    pub fn decode(data: u8) -> UserAccessTimeZone {
+        UserAccessTimeZone {
+            weigand_port_same_time_zone: data & 0b10000000 != 0,
+            user_time_zone: data & 0b00111111,
+        }
+    }
+
+    pub fn encode(&self) -> u8 {
+        0 // TODO implement
     }
 }
 
@@ -456,7 +483,7 @@ pub struct UserParameters {
     pub tag_uid: u64,
     pub pin_code: u32,
     pub mode: UserMode,
-    pub zone: u8,
+    pub zone: UserAccessTimeZone,
     pub available_doors_bitmap: u16,
     pub last_allowed_date: NaiveDate,
     pub level: u8,
@@ -472,7 +499,7 @@ impl UserParameters {
         let tag_uid = u64::from_be_bytes([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]]);
         let pin_code = u32::from_be_bytes([data[8], data[9], data[10], data[11]]);
         let mode = UserMode::decode(data[12]);
-        let zone = data[13];
+        let zone = UserAccessTimeZone::decode(data[13]);
         let available_doors_bitmap = u16::from_be_bytes([data[14], data[15]]);
 
         let year = 2000 + data[16] as i32;
@@ -493,6 +520,30 @@ impl UserParameters {
             level,
             enable_anti_pass_back_check,
         })
+    }
+
+    pub fn encode(&self) -> Vec<u8> {
+        let mut data = Vec::<u8>::new();
+        data.extend_from_slice(&self.tag_uid.to_be_bytes());
+        data.extend_from_slice(&self.pin_code.to_be_bytes());
+        data.push(self.mode.encode());
+        data.push(self.zone.encode());
+        data.extend_from_slice(&self.available_doors_bitmap.to_be_bytes());
+
+        let year = self.last_allowed_date.year() - 2000;
+        assert!(year < 0, "year minimum is 2000");
+        assert!(year > 255, "year maximum is 2255");
+        data.push(year as u8);
+        data.push(self.last_allowed_date.month() as u8);
+        data.push(self.last_allowed_date.day() as u8);
+
+        data.push(self.level);
+        let option_byte = if self.enable_anti_pass_back_check { 0b1000000 } else { 0b0000000 };
+        data.push(option_byte);
+
+        assert_eq!(data.len(), 26);
+
+        data
     }
 }
 

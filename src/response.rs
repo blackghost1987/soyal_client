@@ -215,7 +215,7 @@ pub struct ControllerOptionsResponse {
     pub weigand_port_door_close_time: u8, // seconds
     pub main_port_arming:    bool,
     pub weigand_port_arming: bool,
-    // pub access_mode: AccessMode, // TODO implement
+    // pub access_mode: AccessMode, // TODO implement - what bits?
     pub armed_output_pulse_width: u8, // 10 ms
     pub arming_delay: u8, // seconds
     pub alarm_delay:  u8, // seconds
