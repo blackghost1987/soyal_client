@@ -217,14 +217,15 @@ pub struct ControllerOptionsResponse {
     pub weigand_port_door_close_time: u8, // seconds
     pub main_port_arming:    bool,
     pub weigand_port_arming: bool,
-    // pub access_mode: AccessMode, // TODO implement - what bits?
+    pub access_mode: ControllerAccessMode,
     pub armed_output_pulse_width: u8, // 10 ms
     pub arming_delay: u8, // seconds
     pub alarm_delay:  u8, // seconds
-    // Data43: UART2 / UART3
+    // Data43: UART2 / UART3 device
     // Data44: CommonOptions
     // Data45: DisplayOptions
-    // Data46..Data52 - only present for later versions
+    // Data46..Data51: only present for later versions
+    // Data52: reserved
 }
 
 impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
@@ -255,6 +256,7 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
         let weigand_port_door_close_time = data[37];
         let main_port_arming    = data[38] & 0b00000001 != 0;
         let weigand_port_arming = data[38] & 0b00000010 != 0;
+        let access_mode = ControllerAccessMode::from_u8(data[39]).ok_or(ProtocolError::UnknownControllerAccessMode)?;
         let armed_output_pulse_width = data[40];
         let arming_delay = data[41];
         let alarm_delay =  data[42];
@@ -283,6 +285,7 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
             weigand_port_door_close_time,
             main_port_arming,
             weigand_port_arming,
+            access_mode,
             armed_output_pulse_width,
             arming_delay,
             alarm_delay,

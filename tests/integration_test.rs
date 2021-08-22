@@ -53,3 +53,12 @@ fn test_get_relay_delays() {
     println!("Hardware delays: {:?}", res);
     assert!(res.is_ok())
 }
+
+#[test]
+#[ignore]
+fn test_get_controller_options() {
+    let client = create_client();
+    let res = client.get_controller_options();
+    println!("Controller params: {:?}", res);
+    assert!(res.is_ok());
+}

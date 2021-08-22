@@ -17,6 +17,7 @@ pub enum ProtocolError {
     UnknownControllerType,
     UnknownEventFunctionCode,
     UnknownPortNumber,
+    UnknownControllerAccessMode,
     MessageTooShort,
     MessageLengthMismatch,
     UnexpectedHeaderValue,
@@ -73,10 +74,12 @@ pub enum ControllerType {
 }
 }
 
+enum_from_primitive! {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ControllerAccessMode {
-    PinOnly,           // Mode 8: 4 digit PIN
-    UserAddressAndPin, // Mode 4: 5 digit address + 4 digit PIN
+    PinOnly           = 8, // 4 digit PIN
+    UserAddressAndPin = 4, // 5 digit address + 4 digit PIN
+}
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
