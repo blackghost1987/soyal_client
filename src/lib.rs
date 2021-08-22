@@ -12,6 +12,7 @@ use std::io::prelude::*;
 use std::net::{IpAddr, TcpStream, SocketAddr};
 use serde::Serialize;
 use std::io;
+use either::Either;
 
 
 #[derive(Clone, Debug, Serialize)]
@@ -37,8 +38,9 @@ impl SoyalClient {
     }
 
     fn send(&self, command: Command, data: &[u8]) -> io::Result<Vec<u8>> {
+        let command_code = command as u8;
         if self.debug_log {
-            println!("Sending command {:?} (with data {:?}) to {:?}", command, data, self.access_data);
+            println!("Sending command {:?} ({:#X?}) (with data {:?}) to {:?}", command, command_code, data, self.access_data);
         }
 
         let address = SocketAddr::new(self.access_data.ip, self.access_data.port);
@@ -47,7 +49,7 @@ impl SoyalClient {
 
         let message = ExtendedMessage {
             destination_id: self.access_data.destination_id,
-            command_code: command as u8,
+            command_code: command_code,
             data
         };
 
@@ -56,7 +58,7 @@ impl SoyalClient {
         let size = stream.read(&mut buffer)?;
 
         if self.debug_log {
-            println!("Received {:?}", &buffer[0..size]);
+            println!("Received {} bytes: {:?}", size, &buffer[0..size]);
         }
 
         io::Result::Ok(buffer[0..size].to_vec())
@@ -70,6 +72,9 @@ impl SoyalClient {
 
     pub fn get_controller_params<T>(&self, sub_code: ControllerParamSubCommand) -> Result<T> where T: Response<T>{
         let raw = self.get_controller_params_inner(sub_code)?;
+        if raw.is_empty() {
+            return Err(ProtocolError::NoResponse.into());
+        }
         T::decode(&raw)
     }
 
@@ -99,9 +104,22 @@ impl SoyalClient {
 
     //*** CONTROLLER PARAMETER SETTERS
 
-    // TODO try to set some data (with something more simple maybe?)
-    pub fn set_controller_params(&self, sub_code: u8) -> io::Result<Vec<u8>> {
-        self.send(Command::SetControllerParams, &[sub_code])
+    pub fn set_controller_params(&self, sub_code: ControllerParamSubCommand, data: &Vec<u8>) -> Result<Either<AckResponse, NackResponse>> {
+        let mut bytes = Vec::<u8>::new();
+        bytes.push(sub_code as u8);
+        bytes.extend_from_slice(&data);
+        let raw = self.send(Command::SetControllerParams, &bytes)?;
+        handle_ack_or_nack(raw)
+    }
+
+    pub fn set_remote_tcp_server_params(&self, params: RemoteTCPServerParams) -> Result<Either<AckResponse, NackResponse>> {
+        let data = params.encode();
+        self.set_controller_params(ControllerParamSubCommand::RemoteTCPServerParams, &data)
+    }
+
+    pub fn set_ip_and_mac_address(&self, params: IpAndMacAddress) -> Result<Either<AckResponse, NackResponse>> {
+        let data = params.encode();
+        self.set_controller_params(ControllerParamSubCommand::IpAndMacAddress, &data)
     }
 
     //*** GENERIC COMMANDS
@@ -111,20 +129,26 @@ impl SoyalClient {
         ControllerStatusResponse::decode(&raw)
     }
 
-    fn get_event_log_inner(&self, data: &[u8]) -> Result<Option<EventLogResponse>> {
-        let _raw = self.send(Command::GetOldestEventLog, data)?;
-        // TODO handle ACK (if no log) OR DATA
-        //EventLogStatusResponse::decode(raw)
-        Ok(None)
+    fn get_event_log_inner(&self, data: &[u8]) -> Result<Either<AckResponse, EventLogResponse>> {
+        let raw = self.send(Command::GetOldestEventLog, data)?;
+        match AckResponse::decode(&raw) {
+            Ok(x) => Ok(Either::Left(x)),
+            Err(_) => {
+                if raw[7] == 0xFF {
+                    return Err(ProtocolError::EventLogOutOfRange.into())
+                }
+                EventLogResponse::decode(&raw).map(Either::Right)
+            }
+        }
     }
 
-    pub fn get_oldest_event_log(&self) -> Result<Option<EventLogResponse>> {
+    pub fn get_oldest_event_log(&self) -> Result<Either<AckResponse, EventLogResponse>> {
         self.get_event_log_inner(&[])
     }
 
     /// RecordID max value is 0xFFFFFE = 16777214
     /// Version 2.07 and later
-    pub fn get_specific_event_log(&self, record_id: u32) -> Result<Option<EventLogResponse>> {
+    pub fn get_specific_event_log(&self, record_id: u32) -> Result<Either<AckResponse, EventLogResponse>> {
         if record_id > EVENT_LOG_MAX_ID {
             return Err(ProtocolError::EventLogOutOfRange.into());
         }
@@ -139,34 +163,35 @@ impl SoyalClient {
         EventLogStatusResponse::decode(&raw)
     }
 
-    pub fn remove_oldest_event_log(&self) -> Result<()> {
-        let _raw = self.send(Command::RemoveOldestEventLog, &[])?;
-        // TODO handle ACK / NACK
-        Ok(())
+    pub fn remove_oldest_event_log(&self) -> Result<Either<AckResponse, NackResponse>> {
+        let raw = self.send(Command::RemoveOldestEventLog, &[])?;
+        handle_ack_or_nack(raw)
     }
 
-    pub fn empty_event_log(&self) -> Result<()> {
-        let _raw = self.send(Command::EmptyEventLog, &[])?;
-        // TODO handle ACK / NACK
-        Ok(())
+    pub fn empty_event_log(&self) -> Result<Either<AckResponse, NackResponse>> {
+        let raw = self.send(Command::EmptyEventLog, &[])?;
+        handle_ack_or_nack(raw)
     }
 
-    pub fn get_user_parameters(&self, user_address: u16, continue_number_of_cards: u8) -> Result<UserParametersResponse> {
+    pub fn get_user_parameters(&self, user_address: u16) -> Result<UserParametersResponse> {
         let mut data = user_address.to_be_bytes().to_vec();
+
+        // TODO make this parametric? decode multiple users
+        let continue_number_of_cards: u8 = 1;
+
         data.push(continue_number_of_cards);
         let raw = self.send(Command::GetUserParams, &data)?;
         UserParametersResponse::decode(&raw)
     }
 
-    pub fn set_user_parameters(&self, user_address: u16, user_params: UserParameters) -> Result<()> {
+    pub fn set_user_parameters(&self, user_address: u16, user_params: UserParameters) -> Result<Either<AckResponse, NackResponse>> {
         let mut data: Vec<u8> = vec![0x01]; // only sending 1 user data
         data.extend_from_slice(&user_address.to_be_bytes());
 
         let user_data = user_params.encode();
         data.extend_from_slice(&user_data);
-        let _raw = self.send(Command::SetUserParamsWithAntiPassBack, &data)?;
-        // TODO handle ACK / NACK
-        Ok(())
+        let raw = self.send(Command::SetUserParamsWithAntiPassBack, &data)?;
+        handle_ack_or_nack(raw)
     }
 
     // TODO Relay On/Off control (0x21)

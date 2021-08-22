@@ -4,7 +4,7 @@ use std::ops::BitXorAssign;
 use crate::api_types::*;
 
 enum_from_primitive! {
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Command {
     GetControllerParams              = 0x12,
     HostingPolling                   = 0x18,

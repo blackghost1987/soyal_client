@@ -2,10 +2,9 @@ use crate::api_types::*;
 
 use chrono::{DateTime, Local, TimeZone};
 use enum_primitive::FromPrimitive;
-use macaddr::MacAddr6;
 use serde::{Serialize, Deserialize};
-use std::net::Ipv4Addr;
 use std::ops::BitXorAssign;
+use either::Either;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EchoResponse<'a> {
@@ -27,10 +26,6 @@ pub trait Response<T> {
             _    => Err(ProtocolError::UnexpectedFirstHeaderByte)
         }?;
 
-        if non_header.len() < 8 {
-            return Err(ProtocolError::MessageTooShort.into())
-        }
-
         let expected_msg_length = u16::from_be_bytes([non_header[0], non_header[1]]) as usize;
         let msg_length = non_header.len() - 2;
         if expected_msg_length != msg_length {
@@ -45,10 +40,15 @@ pub trait Response<T> {
         let sum = raw_msg.get(msg_length-1).expect("Missing sum value");
         let xor = raw_msg.get(msg_length-2).expect("Missing xor value");
 
+        //println!("Received XOR: {:#X?}, SUM {:#X?}", xor, sum);
+
         let mut xor_res: u8 = 0xFF;
         for d in &raw_msg[..msg_length-2] {
             xor_res.bitxor_assign(d);
         }
+
+        //println!("Calculated XOR: {:#X?}", xor_res);
+
         if xor_res != *xor {
             return Err(ProtocolError::BadXorValue.into());
         }
@@ -57,6 +57,9 @@ pub trait Response<T> {
         for d in &raw_msg[..msg_length-1] {
             sum_res = sum_res.wrapping_add(*d);
         }
+
+        //println!("Calculated SUM: {:#X?}", sum_res);
+
         if sum_res != *sum {
             return Err(ProtocolError::BadChecksumValue.into());
         }
@@ -93,6 +96,11 @@ pub struct ControllerStatusResponse {
 impl Response<ControllerStatusResponse> for ControllerStatusResponse {
     fn decode(raw: &Vec<u8>) -> Result<ControllerStatusResponse> {
         let msg = Self::get_message_part(raw)?;
+
+        if msg.len() < 5 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
         let destination_id = msg[0];
         let function_code  = msg[1];
         let source         = msg[2];
@@ -122,6 +130,11 @@ impl Response<SerialNumberResponse> for SerialNumberResponse {
     fn decode(raw: &Vec<u8>) -> Result<SerialNumberResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
+
+        if data.len() < 15 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
         let source = data[0];
         let serial = data[3..15].to_vec();
 
@@ -149,6 +162,11 @@ impl Response<RelayDelayResponse> for RelayDelayResponse {
     fn decode(raw: &Vec<u8>) -> Result<RelayDelayResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
+
+        if data.len() < 9 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
         let source = data[0];
         let main_port_door_relay_time    = u16::from_be_bytes([data[1], data[2]]);
         let weigand_port_door_relay_time = u16::from_be_bytes([data[3], data[4]]);
@@ -179,6 +197,11 @@ impl Response<EditPasswordResponse> for EditPasswordResponse {
     fn decode(raw: &Vec<u8>) -> Result<EditPasswordResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
+
+        if data.len() < 5 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
         let source = data[0];
         let password = u32::from_be_bytes([data[1], data[2], data[3], data[4]]);
 
@@ -232,6 +255,10 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
     fn decode(raw: &Vec<u8>) -> Result<ControllerOptionsResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
+
+        if data.len() < 43 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
 
         let source = data[0];
         let controller_type = ControllerType::from_u8(data[1]).ok_or(ProtocolError::UnknownControllerType)?;
@@ -298,14 +325,8 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
 pub struct IpAndMacAddressResponse {
     pub destination_id: u8,
     pub command: EchoCode,
-    pub mac_address: MacAddr6,
-    pub ip_address:  Ipv4Addr,
-    pub subnet_mask: Ipv4Addr,
-    pub gateway_address: Ipv4Addr,
-    pub tcp_port: u16,
-    pub primary_dns:   Ipv4Addr,
-    pub secondary_dns: Ipv4Addr,
-    pub http_server_port: u16,
+    pub source: u8,
+    pub address_data: IpAndMacAddress,
 }
 
 impl Response<IpAndMacAddressResponse> for IpAndMacAddressResponse {
@@ -313,26 +334,20 @@ impl Response<IpAndMacAddressResponse> for IpAndMacAddressResponse {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
-        let mac_address      = MacAddr6::new(data[0], data[1], data[2], data[3], data[4], data[5]);
-        let ip_address       = Ipv4Addr::new(data[6], data[7], data[8], data[9]);
-        let subnet_mask      = Ipv4Addr::new(data[10], data[11], data[12], data[13]);
-        let gateway_address  = Ipv4Addr::new(data[14], data[15], data[16], data[17]);
-        let tcp_port         = u16::from_be_bytes([data[18], data[19]]);
-        let primary_dns      = Ipv4Addr::new(data[20], data[21], data[22], data[23]);
-        let secondary_dns    = Ipv4Addr::new(data[24], data[25], data[26], data[27]);
-        let http_server_port = u16::from_be_bytes([data[28], data[29]]);
+        if data.len() < 32 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
+        let source = data[0];
+        // data[1] ??? what is this? documentation doesn't have it
+
+        let address_data = IpAndMacAddress::decode(&data[2..]);
 
         Ok(IpAndMacAddressResponse {
             destination_id: parts.destination_id,
             command: parts.command,
-            mac_address,
-            ip_address,
-            subnet_mask,
-            gateway_address,
-            tcp_port,
-            primary_dns,
-            secondary_dns,
-            http_server_port,
+            source,
+            address_data
         })
     }
 }
@@ -342,10 +357,8 @@ impl Response<IpAndMacAddressResponse> for IpAndMacAddressResponse {
 pub struct RemoteTCPServerParamsResponse {
     pub destination_id: u8,
     pub command: EchoCode,
-    pub first_remote_address: Ipv4Addr,
-    pub first_remote_port: u16,
-    pub second_remote_address: Ipv4Addr,
-    pub second_remote_port: u16,
+    pub source: u8,
+    pub remote_server_params: RemoteTCPServerParams,
 }
 
 impl Response<RemoteTCPServerParamsResponse> for RemoteTCPServerParamsResponse {
@@ -353,18 +366,18 @@ impl Response<RemoteTCPServerParamsResponse> for RemoteTCPServerParamsResponse {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
-        let first_remote_address  = Ipv4Addr::new(data[6], data[7], data[8], data[9]);
-        let first_remote_port     = u16::from_be_bytes([data[18], data[19]]);
-        let second_remote_address = Ipv4Addr::new(data[6], data[7], data[8], data[9]);
-        let second_remote_port    = u16::from_be_bytes([data[18], data[19]]);
+        if data.len() < 13 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
+        let source = data[0];
+        let remote_server_params = RemoteTCPServerParams::decode(&data[1..]);
 
         Ok(RemoteTCPServerParamsResponse {
             destination_id: parts.destination_id,
             command: parts.command,
-            first_remote_address,
-            first_remote_port,
-            second_remote_address,
-            second_remote_port
+            source,
+            remote_server_params
         })
     }
 }
@@ -382,12 +395,74 @@ impl Response<EventLogStatusResponse> for EventLogStatusResponse {
     fn decode(raw: &Vec<u8>) -> Result<EventLogStatusResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
+
+        if data.len() < 3 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
         Ok(EventLogStatusResponse {
             destination_id: parts.destination_id,
             command: parts.command,
             event_log_counter:  data[0],
             queue_input_point:  data[1],
             queue_output_point: data[2],
+        })
+    }
+}
+
+pub fn handle_ack_or_nack(raw: Vec<u8>) -> Result<Either<AckResponse, NackResponse>> {
+    match AckResponse::decode(&raw) {
+        Ok(x) => Ok(Either::Left(x)),
+        Err(_) => NackResponse::decode(&raw).map(Either::Right)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AckResponse {
+    pub destination_id: u8,
+    pub source: u8,
+    // controller specific data
+}
+
+impl Response<AckResponse> for AckResponse {
+    fn decode(raw: &Vec<u8>) -> Result<AckResponse> {
+        let parts = Self::get_data_parts(raw, Some(EchoCode::CommandAcknowledged))?;
+        let data = parts.data;
+
+        if data.len() < 1 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
+        let source = data[0];
+        
+        Ok(AckResponse {
+            destination_id: parts.destination_id,
+            source
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NackResponse {
+    pub destination_id: u8,
+    pub source: u8,
+    // controller specific data
+}
+
+impl Response<NackResponse> for NackResponse {
+    fn decode(raw: &Vec<u8>) -> Result<NackResponse> {
+        let parts = Self::get_data_parts(raw, Some(EchoCode::CommandUnacknowledged))?;
+        let data = parts.data;
+
+        if data.len() < 1 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
+        let source = data[0];
+
+        Ok(NackResponse {
+            destination_id: parts.destination_id,
+            source
         })
     }
 }
@@ -400,23 +475,28 @@ pub struct EventLogResponse {
     pub timestamp: DateTime<Local>,
     pub port_number: PortNumber,
     pub user_address_or_tag_id: u16,
-    pub tag_id_for_normal_access: u32,
+    pub tag_id_for_normal_access: (u16, u16),
     // Sub Code
-    // Sub Func.
+    // Sub Func. // function code AlarmEvent
     // Ext Code
     // User level
     pub door_number: u8,
     pub sor_deduction_amount: u16,
     pub sor_balance: u16,
-    pub user_inputted_code: Option<u32>,
+    pub user_inputted_code: Option<u32>, // only available for function code InvalidUserPIN
 }
 
 impl Response<EventLogResponse> for EventLogResponse {
     fn decode(raw: &Vec<u8>) -> Result<EventLogResponse> {
         let msg = Self::get_message_part(raw)?;
+
         let destination_id = msg[0];
-        let function_code = EventFunctionCode::from_u8(msg[1]).ok_or(ProtocolError::BadChecksumValue)?;
+        let function_code = EventFunctionCode::from_u8(msg[1]).ok_or(ProtocolError::UnknownEventFunctionCode)?;
         let data = &msg[2..];
+
+        if data.len() < 25 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
 
         let source = data[0];
 
@@ -431,7 +511,7 @@ impl Response<EventLogResponse> for EventLogResponse {
         let port_number = PortNumber::from_u8(data[8]).ok_or(ProtocolError::UnknownPortNumber)?;
 
         let user_address_or_tag_id = u16::from_be_bytes([data[9], data[10]]);
-        let tag_id_for_normal_access = u32::from_be_bytes([data[15], data[16], data[19], data[20]]);
+        let tag_id_for_normal_access = (u16::from_be_bytes([data[15], data[16]]), u16::from_be_bytes([data[19], data[20]]));
 
         let door_number = data[17];
 
@@ -463,25 +543,28 @@ pub struct UserParametersResponse {
     pub destination_id: u8,
     pub command: EchoCode,
     pub source: u8,
-    pub user_parameters_1: UserParameters,
-    pub user_parameters_2: UserParameters,
+    pub user_parameters: UserParameters,
 }
 
 impl Response<UserParametersResponse> for UserParametersResponse {
     fn decode(raw: &Vec<u8>) -> Result<UserParametersResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
-        let source = data[0];
 
-        let user_parameters_1 = UserParameters::decode(&data[1..25])?;
-        let user_parameters_2 = UserParameters::decode(&data[25..49])?;
+        //println!("User data: {:?}, len: {}", data, data.len());
+
+        if data.len() < 25 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
+        let source = data[0];
+        let user_parameters = UserParameters::decode(&data[1..25])?;
 
         Ok(UserParametersResponse {
             destination_id: parts.destination_id,
             command: parts.command,
             source,
-            user_parameters_1,
-            user_parameters_2,
+            user_parameters,
         })
     }
 }
@@ -583,5 +666,39 @@ mod tests {
         }
     }
 
-    // TODO TEST ControllerOptionsResponse
+    #[test]
+    fn decode_controller_options_response() {
+        let raw = vec!(255, 0, 90, 165, 0, 57, 0, 3, 1, 193, 1, 2, 0, 1, 226, 64, 0, 0, 0, 0, 0, 0, 0, 0, 4, 210, 0, 0, 0, 0, 1, 4, 0, 100, 2, 188, 2, 188, 5, 220, 48, 16, 1, 17, 15, 15, 0, 8, 0, 1, 1, 65, 24, 9, 5, 0, 0, 0, 3, 3, 0, 159, 13);
+        let d = ControllerOptionsResponse::decode(&raw);
+        assert!(d.is_ok());
+        if let Ok(options) = d {
+            assert_eq!(options.destination_id, 0);
+            assert_eq!(options.command, EchoCode::RequestedData);
+            assert_eq!(options.source, 1);
+            assert_eq!(options.controller_type, ControllerType::AR725Ev2);
+            assert_eq!(options.main_port_door_number, 1);
+            assert_eq!(options.weigand_port_door_number, 2);
+            assert_eq!(options.edit_password, 123456);
+            assert_eq!(options.master_user_range_start, 0);
+            assert_eq!(options.master_user_range_end, 0);
+            assert_eq!(options.general_password, 1234);
+            assert_eq!(options.duress_code, 0);
+            assert_eq!(options.tag_hold_time, 100);
+            assert_eq!(options.main_port_door_relay_time, 700);
+            assert_eq!(options.weigand_port_door_relay_time, 700);
+            assert_eq!(options.alarm_relay_time, 1500);
+            assert_eq!(options.main_port_options,    ControllerOptions { anti_pass_back_enabled: false, anti_pass_back_in: false, force_open_alarm: true,  egress_button: true, skip_pin_check: false, auto_open_zone: false, auto_lock_door: false, time_attendance_disabled: false });
+            assert_eq!(options.weigand_port_options, ControllerOptions { anti_pass_back_enabled: false, anti_pass_back_in: false, force_open_alarm: false, egress_button: true, skip_pin_check: false, auto_open_zone: false, auto_lock_door: false, time_attendance_disabled: false });
+            assert_eq!(options.main_port_extended_options,    ExtendedControllerOptions { door_relay_active_in_auto_open_time_zone: false, stop_alarm_at_door_closed: false, free_tag_access_mode: false, use_main_door_relay_for_weigand_port: false, auto_disarmed_time_zone: false, key_pad_inhibited: false, egress_button_sound: true });
+            assert_eq!(options.weigand_port_extended_options, ExtendedControllerOptions { door_relay_active_in_auto_open_time_zone: false, stop_alarm_at_door_closed: false, free_tag_access_mode: false, use_main_door_relay_for_weigand_port: true,  auto_disarmed_time_zone: false, key_pad_inhibited: false, egress_button_sound: true });
+            assert_eq!(options.main_port_door_close_time, 15);
+            assert_eq!(options.weigand_port_door_close_time, 15);
+            assert_eq!(options.main_port_arming, false);
+            assert_eq!(options.weigand_port_arming, false);
+            assert_eq!(options.access_mode, ControllerAccessMode::PinOnly);
+            assert_eq!(options.armed_output_pulse_width, 0);
+            assert_eq!(options.arming_delay, 1);
+            assert_eq!(options.alarm_delay, 1);
+        }
+    }
 }

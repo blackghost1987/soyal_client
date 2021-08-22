@@ -4,13 +4,15 @@ use std::result;
 
 use serde::{Serialize, Deserialize};
 use chrono::{NaiveDate, Datelike};
+use std::net::Ipv4Addr;
+use macaddr::MacAddr6;
 
 pub const EXTENDED_HEADER: [u8; 4] = [0xFF, 0x00, 0x5A, 0xA5];
 
 /// RecordID is u24 and 0xFFFFFF is used for status, so max value is 0xFFFFFE = 16777214
 pub const EVENT_LOG_MAX_ID: u32 = 16777214;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ProtocolError {
     UnknownEventType,
     UnknownCommandCode,
@@ -27,6 +29,8 @@ pub enum ProtocolError {
     BadXorValue,
     BadChecksumValue,
     EventLogOutOfRange,
+    UserNotFound,
+    NoResponse,
 }
 
 #[derive(Debug)]
@@ -65,7 +69,7 @@ pub enum EchoCode {
 }
 
 enum_from_primitive! {
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ControllerType {
     AR881E    = 0xC0,
     AR725Ev2  = 0xC1,
@@ -75,14 +79,14 @@ pub enum ControllerType {
 }
 
 enum_from_primitive! {
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ControllerAccessMode {
     PinOnly           = 8, // 4 digit PIN
     UserAddressAndPin = 4, // 5 digit address + 4 digit PIN
 }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum UserAccessMode {
     Invalid,
     ReadOnly,
@@ -110,7 +114,7 @@ impl UserAccessMode {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StatusData {
     pub keypad_locked: bool,
     pub door_release_output: bool,
@@ -136,7 +140,7 @@ impl StatusData {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AlarmType {
     ForceAlarm,
     OpenTooLongAlarm,
@@ -148,7 +152,7 @@ impl AlarmType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ControllerOptions {
     pub anti_pass_back_enabled: bool,
     pub anti_pass_back_in: bool,
@@ -175,7 +179,7 @@ impl ControllerOptions {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExtendedControllerOptions {
     pub door_relay_active_in_auto_open_time_zone: bool,
     pub stop_alarm_at_door_closed: bool,
@@ -202,7 +206,7 @@ impl ExtendedControllerOptions {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IoStatusData {
     pub status_data: StatusData,
     pub alarm_type: Option<AlarmType>,
@@ -227,7 +231,7 @@ impl IoStatusData {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AllKeysPressedData {
     pub fifth_key_data: Option<u8>,
     pub input_value: u16,
@@ -253,7 +257,7 @@ impl AllKeysPressedData {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NewCardPresentData {
     //time_and_attendance: TimeAndAttendance, // TODO implement
     //exit_input: ExitInput, // TODO implement
@@ -293,12 +297,12 @@ impl NewCardPresentData {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct KeypadEventData {
     // TODO implement KeypadEventData
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ControllerStatus {
     IoStatus(IoStatusData),
     AllKeysPressed(AllKeysPressedData), // 4 or 5 keys pressed (depends on Mode 4 v. 8)
@@ -439,7 +443,7 @@ pub enum PortNumber {
 }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserMode {
     pub access_mode: UserAccessMode,
     pub patrol_card: bool,
@@ -478,7 +482,7 @@ impl UserMode {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserAccessTimeZone {
     pub weigand_port_same_time_zone: bool,
     pub user_time_zone: u8, // Zero for free zone control, maximum is 63
@@ -502,9 +506,9 @@ impl UserAccessTimeZone {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserParameters {
-    pub tag_uid: u64,
+    pub tag_uid: (u16, u16, u16, u16),
     pub pin_code: u32,
     pub mode: UserMode,
     pub zone: UserAccessTimeZone,
@@ -520,7 +524,17 @@ impl UserParameters {
             return Err(ProtocolError::NotEnoughData.into());
         }
 
-        let tag_uid = u64::from_be_bytes([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]]);
+        let tag_uid = (
+            u16::from_be_bytes([data[0], data[1]]),
+            u16::from_be_bytes([data[2], data[3]]),
+            u16::from_be_bytes([data[4], data[5]]),
+            u16::from_be_bytes([data[6], data[7]])
+        );
+
+        if tag_uid == (0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF) {
+            return Err(ProtocolError::UserNotFound.into());
+        }
+
         let pin_code = u32::from_be_bytes([data[8], data[9], data[10], data[11]]);
         let mode = UserMode::decode(data[12]);
         let zone = UserAccessTimeZone::decode(data[13]);
@@ -548,15 +562,21 @@ impl UserParameters {
 
     pub fn encode(&self) -> Vec<u8> {
         let mut data = Vec::<u8>::new();
-        data.extend_from_slice(&self.tag_uid.to_be_bytes());
+
+        data.extend_from_slice(&self.tag_uid.0.to_be_bytes());
+        data.extend_from_slice(&self.tag_uid.1.to_be_bytes());
+        data.extend_from_slice(&self.tag_uid.2.to_be_bytes());
+        data.extend_from_slice(&self.tag_uid.3.to_be_bytes());
+
         data.extend_from_slice(&self.pin_code.to_be_bytes());
         data.push(self.mode.encode());
         data.push(self.zone.encode());
         data.extend_from_slice(&self.available_doors_bitmap.to_be_bytes());
 
         let year = self.last_allowed_date.year() - 2000;
-        assert!(year < 0, "year minimum is 2000");
-        assert!(year > 255, "year maximum is 2255");
+        println!("year: {:?}", year);
+        assert!(year >= 0, "year minimum is 2000");
+        assert!(year <= 255, "year maximum is 2255");
         data.push(year as u8);
         data.push(self.last_allowed_date.month() as u8);
         data.push(self.last_allowed_date.day() as u8);
@@ -565,7 +585,103 @@ impl UserParameters {
         let option_byte = if self.enable_anti_pass_back_check { 0b1000000 } else { 0b0000000 };
         data.push(option_byte);
 
-        assert_eq!(data.len(), 26);
+        // reserved bytes
+        data.extend_from_slice(&[0x00, 0x00, 0x00]);
+
+        assert_eq!(data.len(), 24, "Bad user data length");
+
+        data
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RemoteTCPServerParams {
+    pub first_remote_address: Ipv4Addr,
+    pub first_remote_port: u16,
+    pub second_remote_address: Ipv4Addr,
+    pub second_remote_port: u16,
+}
+
+impl RemoteTCPServerParams {
+    pub fn decode(data: &[u8]) -> RemoteTCPServerParams {
+        let first_remote_address  = Ipv4Addr::new(data[0], data[1], data[2], data[3]);
+        let first_remote_port     = u16::from_be_bytes([data[4], data[5]]);
+        let second_remote_address = Ipv4Addr::new(data[6], data[7], data[8], data[9]);
+        let second_remote_port    = u16::from_be_bytes([data[10], data[11]]);
+
+        RemoteTCPServerParams {
+            first_remote_address,
+            first_remote_port,
+            second_remote_address,
+            second_remote_port,
+        }
+    }
+
+    pub fn encode(&self) -> Vec<u8> {
+        let mut data = Vec::<u8>::new();
+        let first_addr:  u32 = self.first_remote_address.into();
+        let second_addr: u32 = self.second_remote_address.into();
+
+        data.extend_from_slice(&first_addr.to_be_bytes());
+        data.extend_from_slice(&self.first_remote_port.to_be_bytes());
+        data.extend_from_slice(&second_addr.to_be_bytes());
+        data.extend_from_slice(&self.second_remote_port.to_be_bytes());
+
+        data
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IpAndMacAddress {
+    pub mac_address: MacAddr6,
+    pub ip_address:  Ipv4Addr,
+    pub subnet_mask: Ipv4Addr,
+    pub gateway_address: Ipv4Addr,
+    pub tcp_port: u16,
+    pub dns_primary:   Ipv4Addr,
+    pub dns_secondary: Ipv4Addr,
+    pub http_server_port: u16,
+}
+
+impl IpAndMacAddress {
+    pub fn decode(data: &[u8]) -> IpAndMacAddress {
+        let mac_address      = MacAddr6::new(data[0], data[1], data[2], data[3], data[4], data[5]);
+        let ip_address       = Ipv4Addr::new(data[6], data[7], data[8], data[9]);
+        let subnet_mask      = Ipv4Addr::new(data[10], data[11], data[12], data[13]);
+        let gateway_address  = Ipv4Addr::new(data[14], data[15], data[16], data[17]);
+        let tcp_port         = u16::from_be_bytes([data[18], data[19]]);
+        let dns_primary      = Ipv4Addr::new(data[20], data[21], data[22], data[23]);
+        let dns_secondary    = Ipv4Addr::new(data[24], data[25], data[26], data[27]);
+        let http_server_port = u16::from_be_bytes([data[28], data[29]]);
+
+        IpAndMacAddress {
+            mac_address,
+            ip_address,
+            subnet_mask,
+            gateway_address,
+            tcp_port,
+            dns_primary,
+            dns_secondary,
+            http_server_port
+        }
+    }
+
+    pub fn encode(&self) -> Vec<u8> {
+        let mut data = vec![0x00];
+        let ip_addr:      u32 = self.ip_address.into();
+        let subnet_mask:  u32 = self.subnet_mask.into();
+        let gateway_addr: u32 = self.gateway_address.into();
+        let dns_primary:  u32 = self.dns_primary.into();
+        let dns_secondary: u32 = self.dns_secondary.into();
+
+        data.extend_from_slice(&self.mac_address.as_bytes());
+        data.extend_from_slice(&ip_addr.to_be_bytes());
+        data.extend_from_slice(&subnet_mask.to_be_bytes());
+        data.extend_from_slice(&gateway_addr.to_be_bytes());
+        data.extend_from_slice(&self.tcp_port.to_be_bytes());
+        data.extend_from_slice(&dns_primary.to_be_bytes());
+        data.extend_from_slice(&dns_secondary.to_be_bytes());
+        data.extend_from_slice(&self.http_server_port.to_be_bytes());
 
         data
     }
