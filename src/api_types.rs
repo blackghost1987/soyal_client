@@ -96,6 +96,15 @@ impl UserAccessMode {
             (true, true)   => UserAccessMode::CardPlusPin,
         }
     }
+
+    pub fn encode(&self) -> u8 {
+        match self {
+            UserAccessMode::Invalid =>     0b00000000,
+            UserAccessMode::ReadOnly =>    0b00000001,
+            UserAccessMode::CardOrPIN =>   0b00000010,
+            UserAccessMode::CardPlusPin => 0b00000011,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -455,14 +464,21 @@ impl UserMode {
     }
 
     pub fn encode(&self) -> u8 {
-        0 // TODO implement
+        let mut data = self.access_mode.encode() << 6;
+        if self.patrol_card                        { data += 0b00100000; }
+        if self.card_omitted_after_fingerprint_rec { data += 0b00010000; }
+        if self.fingerprint_omitted_after_card_rec { data += 0b00001000; }
+        if self.expire_check                       { data += 0b00000100; }
+        if self.anti_pass_back_control             { data += 0b00000010; }
+        if self.password_change_available          { data += 0b00000001; }
+        data
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UserAccessTimeZone {
     pub weigand_port_same_time_zone: bool,
-    pub user_time_zone: u8, // Zero for free zone control
+    pub user_time_zone: u8, // Zero for free zone control, maximum is 63
 }
 
 impl UserAccessTimeZone {
@@ -474,7 +490,12 @@ impl UserAccessTimeZone {
     }
 
     pub fn encode(&self) -> u8 {
-        0 // TODO implement
+        assert!(self.user_time_zone < 63, "maximum time zone is 63!");
+        let mut data = self.user_time_zone;
+        if self.weigand_port_same_time_zone {
+            data += 0b1000000;
+        }
+        data
     }
 }
 
