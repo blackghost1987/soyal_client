@@ -184,7 +184,7 @@ pub struct ExtendedControllerOptions {
     pub door_relay_active_in_auto_open_time_zone: bool,
     pub stop_alarm_at_door_closed: bool,
     pub free_tag_access_mode: bool,
-    pub use_main_door_relay_for_weigand_port: bool,
+    pub use_main_door_relay_for_wiegand_port: bool,
     pub auto_disarmed_time_zone: bool,
     pub key_pad_inhibited: bool,
     pub egress_button_sound: bool,
@@ -196,7 +196,7 @@ impl ExtendedControllerOptions {
             door_relay_active_in_auto_open_time_zone: data & 0b10000000 != 0,
             stop_alarm_at_door_closed:                data & 0b01000000 != 0,
             free_tag_access_mode:                     data & 0b00100000 != 0,
-            use_main_door_relay_for_weigand_port:     data & 0b00010000 != 0,
+            use_main_door_relay_for_wiegand_port:     data & 0b00010000 != 0,
             auto_disarmed_time_zone:                  data & 0b00001000 != 0,
             key_pad_inhibited:                        data & 0b00000100 != 0,
             // reserved                               data & 0b00000010 != 0,
@@ -438,8 +438,8 @@ enum_from_primitive! {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PortNumber {
     MainPort     = 17,
-    WeigandPort1 = 18,
-    WeigandPort2 = 19,
+    wiegandPort1 = 18,
+    wiegandPort2 = 19,
 }
 }
 
@@ -484,14 +484,14 @@ impl UserMode {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserAccessTimeZone {
-    pub weigand_port_same_time_zone: bool,
+    pub wiegand_port_same_time_zone: bool,
     pub user_time_zone: u8, // Zero for free zone control, maximum is 63
 }
 
 impl UserAccessTimeZone {
     pub fn decode(data: u8) -> UserAccessTimeZone {
         UserAccessTimeZone {
-            weigand_port_same_time_zone: data & 0b10000000 != 0,
+            wiegand_port_same_time_zone: data & 0b10000000 != 0,
             user_time_zone: data & 0b00111111,
         }
     }
@@ -499,7 +499,7 @@ impl UserAccessTimeZone {
     pub fn encode(&self) -> u8 {
         assert!(self.user_time_zone < 63, "maximum time zone is 63!");
         let mut data = self.user_time_zone;
-        if self.weigand_port_same_time_zone {
+        if self.wiegand_port_same_time_zone {
             data += 0b1000000;
         }
         data
@@ -685,6 +685,18 @@ impl IpAndMacAddress {
 
         data
     }
+}
+
+pub enum RelayCommand {
+    GetCurrentStatus  = 0x00,
+    EnableArmedState  = 0x80,
+    DisableArmedState = 0x81,
+    DoorRelayOn       = 0x82,
+    DoorRelayOff      = 0x83,
+    DoorRelayPulse    = 0x84,
+    AlarmRelayOn      = 0x85,
+    AlarmRelayOff     = 0x86,
+    AlarmRelayPulse   = 0x87,
 }
 
 #[cfg(test)]

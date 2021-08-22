@@ -184,7 +184,7 @@ fn test_set_user_params() {
             anti_pass_back_control: true,
             password_change_available: true
         },
-        zone: UserAccessTimeZone { weigand_port_same_time_zone: true, user_time_zone: 0 },
+        zone: UserAccessTimeZone { wiegand_port_same_time_zone: true, user_time_zone: 0 },
         available_doors_bitmap: 0xFFFF,
         last_allowed_date: NaiveDate::from_ymd(2099, 12, 31),
         level: 0,

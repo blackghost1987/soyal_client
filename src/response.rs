@@ -153,7 +153,7 @@ pub struct RelayDelayResponse {
     pub command: EchoCode,
     pub source: u8,
     pub main_port_door_relay_time:    u16, // 10ms
-    pub weigand_port_door_relay_time: u16, // 10ms
+    pub wiegand_port_door_relay_time: u16, // 10ms
     pub alarm_relay_time:       u16, // 10ms
     pub lift_controller_time:   u16, // 10ms
 }
@@ -169,7 +169,7 @@ impl Response<RelayDelayResponse> for RelayDelayResponse {
 
         let source = data[0];
         let main_port_door_relay_time    = u16::from_be_bytes([data[1], data[2]]);
-        let weigand_port_door_relay_time = u16::from_be_bytes([data[3], data[4]]);
+        let wiegand_port_door_relay_time = u16::from_be_bytes([data[3], data[4]]);
         let alarm_relay_time     = u16::from_be_bytes([data[5], data[6]]);
         let lift_controller_time = u16::from_be_bytes([data[7], data[8]]);
 
@@ -178,7 +178,7 @@ impl Response<RelayDelayResponse> for RelayDelayResponse {
             command: parts.command,
             source,
             main_port_door_relay_time,
-            weigand_port_door_relay_time,
+            wiegand_port_door_relay_time,
             alarm_relay_time,
             lift_controller_time,
         })
@@ -221,7 +221,7 @@ pub struct ControllerOptionsResponse {
     pub source: u8,
     pub controller_type: ControllerType,
     pub main_port_door_number:    u8,
-    pub weigand_port_door_number: u8,
+    pub wiegand_port_door_number: u8,
     pub edit_password:           u32,
     pub master_user_range_start: u32,
     pub master_user_range_end:   u32,
@@ -230,16 +230,16 @@ pub struct ControllerOptionsResponse {
     //pub connected_reader_bitmask: ??? // AR721Ev2 only
     pub tag_hold_time:                u16, // 10ms
     pub main_port_door_relay_time:    u16, // 10ms
-    pub weigand_port_door_relay_time: u16, // 10ms
+    pub wiegand_port_door_relay_time: u16, // 10ms
     pub alarm_relay_time:             u16, // 10ms
     pub main_port_options:             ControllerOptions,
-    pub weigand_port_options:          ControllerOptions,
+    pub wiegand_port_options:          ControllerOptions,
     pub main_port_extended_options:    ExtendedControllerOptions,
-    pub weigand_port_extended_options: ExtendedControllerOptions,
+    pub wiegand_port_extended_options: ExtendedControllerOptions,
     pub main_port_door_close_time:    u8, // seconds
-    pub weigand_port_door_close_time: u8, // seconds
+    pub wiegand_port_door_close_time: u8, // seconds
     pub main_port_arming:    bool,
-    pub weigand_port_arming: bool,
+    pub wiegand_port_arming: bool,
     pub access_mode: ControllerAccessMode,
     pub armed_output_pulse_width: u8, // 10 ms
     pub arming_delay: u8, // seconds
@@ -263,7 +263,7 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
         let source = data[0];
         let controller_type = ControllerType::from_u8(data[1]).ok_or(ProtocolError::UnknownControllerType)?;
         let main_port_door_number    = data[2];
-        let weigand_port_door_number = data[3];
+        let wiegand_port_door_number = data[3];
         let edit_password = u32::from_be_bytes([data[4], data[5], data[6], data[7]]);
         let master_user_range_start = u32::from_be_bytes([data[8], data[9], data[10], data[11]]);
         let master_user_range_end   = u32::from_be_bytes([data[12], data[13], data[14], data[15]]);
@@ -273,16 +273,16 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
         // Data 22-23 connected_reader_bitmask - unimplemented
         let tag_hold_time = u16::from_be_bytes([data[24], data[25]]);
         let main_port_door_relay_time    = u16::from_be_bytes([data[26], data[27]]);
-        let weigand_port_door_relay_time = u16::from_be_bytes([data[28], data[29]]);
+        let wiegand_port_door_relay_time = u16::from_be_bytes([data[28], data[29]]);
         let alarm_relay_time = u16::from_be_bytes([data[30], data[31]]);
         let main_port_options    = ControllerOptions::decode(data[32]);
-        let weigand_port_options = ControllerOptions::decode(data[33]);
+        let wiegand_port_options = ControllerOptions::decode(data[33]);
         let main_port_extended_options    = ExtendedControllerOptions::decode(data[34]);
-        let weigand_port_extended_options = ExtendedControllerOptions::decode(data[35]);
+        let wiegand_port_extended_options = ExtendedControllerOptions::decode(data[35]);
         let main_port_door_close_time    = data[36];
-        let weigand_port_door_close_time = data[37];
+        let wiegand_port_door_close_time = data[37];
         let main_port_arming    = data[38] & 0b00000001 != 0;
-        let weigand_port_arming = data[38] & 0b00000010 != 0;
+        let wiegand_port_arming = data[38] & 0b00000010 != 0;
         let access_mode = ControllerAccessMode::from_u8(data[39]).ok_or(ProtocolError::UnknownControllerAccessMode)?;
         let armed_output_pulse_width = data[40];
         let arming_delay = data[41];
@@ -294,7 +294,7 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
             source,
             controller_type,
             main_port_door_number,
-            weigand_port_door_number,
+            wiegand_port_door_number,
             edit_password,
             master_user_range_start,
             master_user_range_end,
@@ -302,16 +302,16 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
             duress_code,
             tag_hold_time,
             main_port_door_relay_time,
-            weigand_port_door_relay_time,
+            wiegand_port_door_relay_time,
             alarm_relay_time,
             main_port_options,
-            weigand_port_options,
+            wiegand_port_options,
             main_port_extended_options,
-            weigand_port_extended_options,
+            wiegand_port_extended_options,
             main_port_door_close_time,
-            weigand_port_door_close_time,
+            wiegand_port_door_close_time,
             main_port_arming,
-            weigand_port_arming,
+            wiegand_port_arming,
             access_mode,
             armed_output_pulse_width,
             arming_delay,
@@ -677,7 +677,7 @@ mod tests {
             assert_eq!(options.source, 1);
             assert_eq!(options.controller_type, ControllerType::AR725Ev2);
             assert_eq!(options.main_port_door_number, 1);
-            assert_eq!(options.weigand_port_door_number, 2);
+            assert_eq!(options.wiegand_port_door_number, 2);
             assert_eq!(options.edit_password, 123456);
             assert_eq!(options.master_user_range_start, 0);
             assert_eq!(options.master_user_range_end, 0);
@@ -685,16 +685,16 @@ mod tests {
             assert_eq!(options.duress_code, 0);
             assert_eq!(options.tag_hold_time, 100);
             assert_eq!(options.main_port_door_relay_time, 700);
-            assert_eq!(options.weigand_port_door_relay_time, 700);
+            assert_eq!(options.wiegand_port_door_relay_time, 700);
             assert_eq!(options.alarm_relay_time, 1500);
             assert_eq!(options.main_port_options,    ControllerOptions { anti_pass_back_enabled: false, anti_pass_back_in: false, force_open_alarm: true,  egress_button: true, skip_pin_check: false, auto_open_zone: false, auto_lock_door: false, time_attendance_disabled: false });
-            assert_eq!(options.weigand_port_options, ControllerOptions { anti_pass_back_enabled: false, anti_pass_back_in: false, force_open_alarm: false, egress_button: true, skip_pin_check: false, auto_open_zone: false, auto_lock_door: false, time_attendance_disabled: false });
-            assert_eq!(options.main_port_extended_options,    ExtendedControllerOptions { door_relay_active_in_auto_open_time_zone: false, stop_alarm_at_door_closed: false, free_tag_access_mode: false, use_main_door_relay_for_weigand_port: false, auto_disarmed_time_zone: false, key_pad_inhibited: false, egress_button_sound: true });
-            assert_eq!(options.weigand_port_extended_options, ExtendedControllerOptions { door_relay_active_in_auto_open_time_zone: false, stop_alarm_at_door_closed: false, free_tag_access_mode: false, use_main_door_relay_for_weigand_port: true,  auto_disarmed_time_zone: false, key_pad_inhibited: false, egress_button_sound: true });
+            assert_eq!(options.wiegand_port_options, ControllerOptions { anti_pass_back_enabled: false, anti_pass_back_in: false, force_open_alarm: false, egress_button: true, skip_pin_check: false, auto_open_zone: false, auto_lock_door: false, time_attendance_disabled: false });
+            assert_eq!(options.main_port_extended_options,    ExtendedControllerOptions { door_relay_active_in_auto_open_time_zone: false, stop_alarm_at_door_closed: false, free_tag_access_mode: false, use_main_door_relay_for_wiegand_port: false, auto_disarmed_time_zone: false, key_pad_inhibited: false, egress_button_sound: true });
+            assert_eq!(options.wiegand_port_extended_options, ExtendedControllerOptions { door_relay_active_in_auto_open_time_zone: false, stop_alarm_at_door_closed: false, free_tag_access_mode: false, use_main_door_relay_for_wiegand_port: true,  auto_disarmed_time_zone: false, key_pad_inhibited: false, egress_button_sound: true });
             assert_eq!(options.main_port_door_close_time, 15);
-            assert_eq!(options.weigand_port_door_close_time, 15);
+            assert_eq!(options.wiegand_port_door_close_time, 15);
             assert_eq!(options.main_port_arming, false);
-            assert_eq!(options.weigand_port_arming, false);
+            assert_eq!(options.wiegand_port_arming, false);
             assert_eq!(options.access_mode, ControllerAccessMode::PinOnly);
             assert_eq!(options.armed_output_pulse_width, 0);
             assert_eq!(options.arming_delay, 1);

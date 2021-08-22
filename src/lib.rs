@@ -194,5 +194,13 @@ impl SoyalClient {
         handle_ack_or_nack(raw)
     }
 
-    // TODO Relay On/Off control (0x21)
+    pub fn relay_control(&self, command: RelayCommand) -> Result<()> {
+
+        let mut data: Vec<u8> = vec![0x01]; // only sending 1 user data
+        data.extend_from_slice(&user_data);
+        let _raw = self.send(Command::RelayOnOffControl, &data)?;
+        // TODO decode
+
+        Ok(())
+    }
 }
