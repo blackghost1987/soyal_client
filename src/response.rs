@@ -569,6 +569,56 @@ impl Response<UserParametersResponse> for UserParametersResponse {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RelayStatusResponse {
+    pub destination_id: u8,
+    pub command: EchoCode,
+    pub source: u8,
+    pub firmware_version: u8,
+    pub di_port: DIPortStatus,
+    pub relay_port: RelayPortStatus,
+    pub main_port_options:    ControllerOptions,
+    pub wiegand_port_options: ControllerOptions,
+    pub main_port_arming:    bool,
+    pub wiegand_port_arming: bool,
+}
+
+impl Response<RelayStatusResponse> for RelayStatusResponse {
+    fn decode(raw: &Vec<u8>) -> Result<RelayStatusResponse> {
+        let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
+        let data = parts.data;
+
+        if data.len() < 9 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
+        let source = data[0];
+        let firmware_version = data[1];
+        let di_port    = DIPortStatus::decode(data[2]);
+        let relay_port = RelayPortStatus::decode(data[3]);
+        let main_port_options    = ControllerOptions::decode(data[4]);
+        let wiegand_port_options = ControllerOptions::decode(data[5]);
+        // data[6] reserved
+        let main_port_arming    = data[7] & 0b00000001 != 0;
+        let wiegand_port_arming = data[7] & 0b00000010 != 0;
+        // data[8] reserved
+
+
+        Ok(RelayStatusResponse {
+            destination_id: parts.destination_id,
+            command: parts.command,
+            source,
+            firmware_version,
+            di_port,
+            relay_port,
+            main_port_options,
+            wiegand_port_options,
+            main_port_arming,
+            wiegand_port_arming,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

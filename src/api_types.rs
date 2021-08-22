@@ -180,6 +180,44 @@ impl ControllerOptions {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DIPortStatus {
+    main_egress_active: bool,
+    main_door_sensor_active: bool,
+    wiegand_egress_active: bool,
+    wiegand_door_sensor_active: bool,
+}
+
+impl DIPortStatus {
+    pub fn decode(data: u8) -> DIPortStatus {
+        // Note: Active == 0 !!!
+        DIPortStatus {
+            main_egress_active:          data & 0b00000001 != 1,
+            main_door_sensor_active:     data & 0b00000010 != 1,
+            wiegand_egress_active:       data & 0b00000100 != 1,
+            wiegand_door_sensor_active:  data & 0b00001000 != 1,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RelayPortStatus {
+    main_door_relay_active: bool,
+    wiegand_door_relay_active: bool,
+    alarm_relay_active: bool,
+}
+
+impl RelayPortStatus {
+    pub fn decode(data: u8) -> RelayPortStatus {
+        // Note: Active == 0 !!!
+        RelayPortStatus {
+            main_door_relay_active:    data & 0b00000001 != 1,
+            wiegand_door_relay_active: data & 0b00010000 != 1,
+            alarm_relay_active:        data & 0b10000000 != 1,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExtendedControllerOptions {
     pub door_relay_active_in_auto_open_time_zone: bool,
     pub stop_alarm_at_door_closed: bool,
@@ -438,8 +476,9 @@ enum_from_primitive! {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PortNumber {
     MainPort     = 17,
-    wiegandPort1 = 18,
-    wiegandPort2 = 19,
+    WiegandPort1 = 18,
+    WiegandPort2 = 19,
+    AllPorts     = 0xFF,
 }
 }
 

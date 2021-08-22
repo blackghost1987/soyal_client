@@ -112,6 +112,11 @@ impl SoyalClient {
         handle_ack_or_nack(raw)
     }
 
+    // TODO implement and turn off that damn force_open_alarm...
+    /*pub fn set_controller_options(&self) -> Result<ControllerOptionsResponse> {
+        self.set_controller_params(ControllerParamSubCommand::ControllerOptionParams)
+    }*/
+
     pub fn set_remote_tcp_server_params(&self, params: RemoteTCPServerParams) -> Result<Either<AckResponse, NackResponse>> {
         let data = params.encode();
         self.set_controller_params(ControllerParamSubCommand::RemoteTCPServerParams, &data)
@@ -194,13 +199,14 @@ impl SoyalClient {
         handle_ack_or_nack(raw)
     }
 
-    pub fn relay_control(&self, command: RelayCommand) -> Result<()> {
+    pub fn relay_control(&self, command: RelayCommand, port: PortNumber) -> Result<RelayStatusResponse> {
+        let mut data = Vec::<u8>::new();
+        data.push(command as u8);
 
-        let mut data: Vec<u8> = vec![0x01]; // only sending 1 user data
-        data.extend_from_slice(&user_data);
-        let _raw = self.send(Command::RelayOnOffControl, &data)?;
-        // TODO decode
+        let port = (port as u8) - (PortNumber::MainPort as u8);
+        data.push(port);
 
-        Ok(())
+        let raw = self.send(Command::RelayOnOffControl, &data)?;
+        RelayStatusResponse::decode(&raw)
     }
 }

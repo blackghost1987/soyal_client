@@ -194,3 +194,12 @@ fn test_set_user_params() {
     println!("User params: {:?}", res);
     assert!(res.is_ok());
 }
+
+#[test]
+//#[ignore]
+fn test_relay_control() {
+    let client = create_client();
+    let res = client.relay_control(RelayCommand::GetCurrentStatus, PortNumber::AllPorts);
+    println!("User params: {:?}", res);
+    assert!(res.is_ok());
+}
