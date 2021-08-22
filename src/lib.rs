@@ -20,8 +20,8 @@ pub struct AccessData {
     pub ip: IpAddr,
     pub port: u16,
     pub destination_id: u8,
-    pub username: String,
-    pub password: String, // FIXME why is this not needed?
+    //pub username: String,
+    //pub password: String, // FIXME why is this not needed?
 }
 
 pub struct SoyalClient {

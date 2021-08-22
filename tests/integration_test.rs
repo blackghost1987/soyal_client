@@ -7,17 +7,12 @@ use macaddr::MacAddr6;
 
 // WARNING: Hardware-in-the-loop tests! Set real access data here:
 const IP_ADDR: [u8; 4] = [192, 168, 1, 127];
-const USERNAME: &str = "SuperAdm";
-const PASSWORD: &str = "721568";
 
 fn create_client() -> SoyalClient {
     let access_data = AccessData {
         ip: IpAddr::from(Ipv4Addr::from(IP_ADDR)),
         port: 1621,
         destination_id: 1,
-        username: USERNAME.to_string(),
-        password: PASSWORD.to_string(),
-
     };
     SoyalClient::new(access_data, Some(true))
 }
