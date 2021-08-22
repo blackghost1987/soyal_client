@@ -171,7 +171,7 @@ impl Response<RelayDelayResponse> for RelayDelayResponse {
 pub struct EditPasswordResponse {
     pub destination_id: u8,
     pub command: EchoCode,
-    // FIXME maybe there's a source param here as well? are there dangling data?
+    pub source: u8,
     pub password: u32,
 }
 
@@ -179,11 +179,13 @@ impl Response<EditPasswordResponse> for EditPasswordResponse {
     fn decode(raw: &Vec<u8>) -> Result<EditPasswordResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
-        let password = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
+        let source = data[0];
+        let password = u32::from_be_bytes([data[1], data[2], data[3], data[4]]);
 
         Ok(EditPasswordResponse {
             destination_id: parts.destination_id,
             command: parts.command,
+            source,
             password,
         })
     }
