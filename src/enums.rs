@@ -157,7 +157,7 @@ pub enum ControllerStatus {
     IoStatus(IoStatusData),
     AllKeysPressed(AllKeysPressedData), // 4 or 5 keys pressed (depends on Mode 4 v. 8)
     NewCardPresent(NewCardPresentData),
-    KeypadEvent(KeypadEventData), // some keys pressed
+    KeypadEvent(KeypadEventData), // some keys pressed - only in Hosting mode!
 }
 
 impl convert::From<IoStatusData> for ControllerStatus {
@@ -190,7 +190,7 @@ impl ControllerStatus {
             0x00 => IoStatusData::decode(data).map(ControllerStatus::from),
             0x01 => AllKeysPressedData::decode(data).map(ControllerStatus::from),
             0x02 => NewCardPresentData::decode(data).map(ControllerStatus::from),
-            0x06 => Ok(ControllerStatus::KeypadEvent(KeypadEventData {})),
+            0x06 => KeypadEventData::decode(data).map(ControllerStatus::from),
             _ => Err(ProtocolError::UnknownEventType.into()),
         }
     }

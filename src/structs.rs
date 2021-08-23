@@ -604,7 +604,23 @@ impl NewCardPresentData {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct KeypadEventData {
-    // TODO implement KeypadEventData
+    pub key_counter: u8,
+    pub key_data: Vec<u8>,
+}
+
+impl KeypadEventData {
+    pub fn decode(data: &[u8]) -> Result<KeypadEventData> {
+        if data.len() < 3 {
+            return Err(ProtocolError::NotEnoughData.into());
+        }
+        let key_counter = data[1];
+        let key_data = data[2..].to_vec();
+
+        Ok(KeypadEventData {
+            key_counter,
+            key_data
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
