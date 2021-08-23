@@ -1,7 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr};
 
 use soyal_client::*;
-use soyal_client::api_types::*;
 use chrono::NaiveDate;
 use macaddr::MacAddr6;
 use soyal_client::structs::*;

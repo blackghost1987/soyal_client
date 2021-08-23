@@ -1,12 +1,14 @@
 #[macro_use] extern crate enum_primitive;
 
-pub mod api_types;
+pub mod common;
 pub mod response;
 pub mod request;
 pub mod structs;
 pub mod enums;
 
-use crate::api_types::*;
+use crate::common::*;
+use crate::enums::*;
+use crate::structs::*;
 use crate::request::*;
 use crate::response::*;
 
@@ -15,6 +17,7 @@ use std::net::{IpAddr, TcpStream, SocketAddr};
 use serde::Serialize;
 use std::io;
 use either::Either;
+use semver::Version;
 
 
 #[derive(Clone, Debug, Serialize)]
@@ -116,7 +119,8 @@ impl SoyalClient {
 
     pub fn set_controller_options(&self, new_node_id: u8, params: ControllerOptions) -> Result<Either<AckResponse, NackResponse>> {
         let mut data = vec![new_node_id];
-        data.extend(params.encode());
+        let param_data = params.encode(Version::new(4, 3, 0))?;
+        data.extend(&param_data);
         self.set_controller_params(ControllerParamSubCommand::ControllerOptionParams, &data)
     }
 

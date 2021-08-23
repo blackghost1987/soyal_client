@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use std::ops::BitXorAssign;
 
-use crate::api_types::*;
+use crate::common::*;
 
 enum_from_primitive! {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

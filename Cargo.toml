@@ -9,4 +9,5 @@ chrono = { version =  "0.4", features = ["serde"] }
 either = "1.6"
 enum_primitive = "0.1"
 macaddr = { version = "1.0", features = ["serde_std"] }
+semver = { version = "1.0", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }

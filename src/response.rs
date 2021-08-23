@@ -1,10 +1,14 @@
-use crate::api_types::*;
+use crate::common::*;
+use crate::enums::*;
+use crate::structs::*;
 
 use chrono::{DateTime, Local, TimeZone};
 use enum_primitive::FromPrimitive;
 use serde::{Serialize, Deserialize};
 use std::ops::BitXorAssign;
 use either::Either;
+use semver::Version;
+
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EchoResponse<'a> {
@@ -234,7 +238,7 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
 
         let source = data[0];
         let controller_type = ControllerType::from_u8(data[1]).ok_or(ProtocolError::UnknownControllerType)?;
-        let controller_options = ControllerOptions::decode(&data)?;
+        let controller_options = ControllerOptions::decode(&data, Version::new(4, 3, 0))?;
 
         Ok(ControllerOptionsResponse {
             destination_id: parts.destination_id,
@@ -500,7 +504,7 @@ pub struct RelayStatusResponse {
     pub destination_id: u8,
     pub command: EchoCode,
     pub source: u8,
-    pub firmware_version: u8,
+    pub firmware_version: semver::Version,
     pub di_port: DIPortStatus,
     pub relay_port: RelayPortStatus,
     pub main_port_options: ControllerPortOptions,
@@ -519,7 +523,9 @@ impl Response<RelayStatusResponse> for RelayStatusResponse {
         }
 
         let source = data[0];
-        let firmware_version = data[1];
+        let firmware_major = (data[1] & 0xF0) >> 4;
+        let firmware_minor = data[1] & 0x0F;
+        let firmware_version = semver::Version::new(firmware_major as u64, firmware_minor as u64, 0);
         let di_port    = DIPortStatus::decode(data[2]);
         let relay_port = RelayPortStatus::decode(data[3]);
         let main_port_options    = ControllerPortOptions::decode(data[4]);
