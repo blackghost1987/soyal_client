@@ -216,4 +216,6 @@ impl SoyalClient {
         let raw = self.send(Command::RelayOnOffControl, &data)?;
         RelayStatusResponse::decode(&raw)
     }
+
+    // TODO Setup real time clock of target device (0x23)
 }
