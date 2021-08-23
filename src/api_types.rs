@@ -6,13 +6,16 @@ use serde::{Serialize, Deserialize};
 use chrono::{NaiveDate, Datelike};
 use std::net::Ipv4Addr;
 use macaddr::MacAddr6;
+use enum_primitive::FromPrimitive;
+use crate::structs::*;
+use crate::enums::*;
 
 pub const EXTENDED_HEADER: [u8; 4] = [0xFF, 0x00, 0x5A, 0xA5];
 
 /// RecordID is u24 and 0xFFFFFF is used for status, so max value is 0xFFFFFE = 16777214
 pub const EVENT_LOG_MAX_ID: u32 = 16777214;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ProtocolError {
     UnknownEventType,
     UnknownCommandCode,
@@ -20,6 +23,11 @@ pub enum ProtocolError {
     UnknownEventFunctionCode,
     UnknownPortNumber,
     UnknownControllerAccessMode,
+    UnknownUartBaudRate,
+    UnknownUartType,
+    UnknownHostBaudRate,
+    UnknownRS485PortType,
+    UnknownOperationMode,
     MessageTooShort,
     MessageLengthMismatch,
     UnexpectedHeaderValue,
@@ -54,7 +62,7 @@ impl convert::From<ProtocolError> for ClientError {
 pub type Result<T> = result::Result<T, ClientError>;
 
 enum_from_primitive! {
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum EchoCode {
     RequestedData               = 0x03,
     CommandAcknowledged         = 0x04,
@@ -69,7 +77,7 @@ pub enum EchoCode {
 }
 
 enum_from_primitive! {
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ControllerType {
     AR881E    = 0xC0,
     AR725Ev2  = 0xC1,
@@ -79,14 +87,14 @@ pub enum ControllerType {
 }
 
 enum_from_primitive! {
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ControllerAccessMode {
     PinOnly           = 8, // 4 digit PIN
     UserAddressAndPin = 4, // 5 digit address + 4 digit PIN
 }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum UserAccessMode {
     Invalid,
     ReadOnly,
@@ -140,7 +148,7 @@ impl StatusData {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum AlarmType {
     ForceAlarm,
     OpenTooLongAlarm,
@@ -152,8 +160,357 @@ impl AlarmType {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum UART2Type {
+    Fingerprint9000,
+    Fingerprint3DO1500,
+    LiftController,
+    SlavePortAR716E,
+    VoiceModuleOrReader, // voice module port for EV5, channel 1 reader port for AR721Ev2
+    SerialPrinter,
+}
+
+enum_from_primitive! {
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum UartBaudRate {
+    Baud4800  = 0b00000000,
+    Baud9600  = 0b01000000,
+    Baud19200 = 0b10000000,
+    Baud38400 = 0b11000000,
+}
+}
+
+enum_from_primitive! {
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum HostBaudRate {
+    Baud9600   = 0x00,
+    Baud19200  = 0x01,
+    Baud38400  = 0x02,
+    Baud57600  = 0x03,
+    Baud115200 = 0x04,
+}
+}
+
+enum_from_primitive! {
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum UART3Type {
+    YungTAILiftPort     = 0b00000000,
+    LEDDisplayPanel     = 0b00100000,
+    VoiceModuleOrReader = 0b00110000, // voice module port for EV5, channel 2 reader port for AR721Ev2
+}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UARTData {
+    pub uart2_type: UART2Type,
+    pub uart2_baud_rate: UartBaudRate,
+    pub uart3_type: UART3Type,
+}
+
+impl UARTData {
+    pub fn decode(data: u8) -> Result<UARTData> {
+        let uart2_type = match data & 0b00000011 {
+            0b00000000 => Ok(UART2Type::Fingerprint3DO1500),
+            0b00000001 => match data & 0b00001111 {
+                0b00000001 => Ok(UART2Type::LiftController),
+                0b00000101 => Ok(UART2Type::SlavePortAR716E),
+                0b00001001 => Ok(UART2Type::VoiceModuleOrReader),
+                0b00001101 => Ok(UART2Type::SerialPrinter),
+                _ => Err(ProtocolError::UnknownUartType) // should not happen
+            },
+            0b00000010 => Err(ProtocolError::UnknownUartType), // reserved
+            0b00000011 => Ok(UART2Type::Fingerprint9000),
+            _ => Err(ProtocolError::UnknownUartType) // should not happen
+        }?;
+
+        let baud_rate_bits = data & 0b11000000;
+        let uart2_baud_rate = UartBaudRate::from_u8(baud_rate_bits).ok_or(ProtocolError::UnknownUartBaudRate)?;
+        let uart3_type = UART3Type::from_u8(data & 0b00110000).ok_or(ProtocolError::UnknownUartType)?;
+
+        Ok(UARTData {
+            uart2_type,
+            uart2_baud_rate,
+            uart3_type,
+        })
+    }
+
+    pub fn encode(&self) -> u8 {
+        let mut data = match self.uart2_type {
+            UART2Type::Fingerprint9000 =>     0b00000011,
+            UART2Type::Fingerprint3DO1500 =>  0b00000000,
+            UART2Type::LiftController =>      0b00000001,
+            UART2Type::SlavePortAR716E =>     0b00000101,
+            UART2Type::VoiceModuleOrReader => 0b00001001,
+            UART2Type::SerialPrinter =>       0b00001101,
+        };
+
+        data += self.uart2_baud_rate as u8;
+        data += self.uart3_type as u8;
+
+        data
+    }
+}
+
+enum_from_primitive! {
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum RS485PortFunction {
+    LiftControlOutput = 0b00000000,
+    HostCommunication = 0b00010000,
+    LEDDisplayPanel   = 0b00100000,
+    SerialPrinter     = 0b00110000,
+}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CommonOptions {
+    pub enable_black_table_check: bool,
+    pub show_local_language_manual: bool,
+    pub rs485_port_function: RS485PortFunction,
+    pub wiegand_signal_output_disable: bool,
+    pub lcd_display_date_in_dd_mm: bool,
+    pub auto_reset_anti_pass_back: bool,
+    pub trigger_alarm_on_expired_user: bool,
+}
+
+impl CommonOptions {
+    pub fn decode(data: u8) -> CommonOptions {
+        let rs485_port_function = RS485PortFunction::from_u8(data & 0b00110000).expect("RS485 port decoding should not fail");
+
+        CommonOptions {
+            enable_black_table_check:      data & 0b10000000 != 0,
+            show_local_language_manual:    data & 0b01000000 != 0,
+            rs485_port_function,
+            wiegand_signal_output_disable: data & 0b00001000 != 0,
+            lcd_display_date_in_dd_mm:     data & 0b00000100 != 0,
+            auto_reset_anti_pass_back:     data & 0b00000010 != 0,
+            trigger_alarm_on_expired_user: data & 0b00000001 != 0,
+        }
+    }
+
+    pub fn encode(&self) -> u8 {
+        let mut data = 0b00000000;
+        if self.enable_black_table_check      { data += 0b10000000; }
+        if self.show_local_language_manual    { data += 0b01000000; }
+        data += self.rs485_port_function as u8;
+        if self.wiegand_signal_output_disable { data += 0b00001000; }
+        if self.lcd_display_date_in_dd_mm     { data += 0b00000100; }
+        if self.auto_reset_anti_pass_back     { data += 0b00000010; }
+        if self.trigger_alarm_on_expired_user { data += 0b00000001; }
+        data
+    }
+}
+
+enum_from_primitive! {
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum UIDDisplayFormat {
+    Disabled = 0b00000000,
+    WG32     = 0b00000001,
+    ABA10    = 0b00000010,
+    HEX      = 0b00000011,
+    WG26     = 0b00000100,
+    ABA8     = 0b00000101,
+    Custom   = 0b00000110,
+}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DisplayOptions {
+    pub fingerprint_enroll_duplication_check: bool,
+    pub auto_duty_code_shift_table_enabled: bool,
+    pub show_wiegand_port_message_on_main_lcd: bool,
+    pub uid_display_format: UIDDisplayFormat,
+}
+
+impl DisplayOptions {
+    pub fn decode(data: u8) -> DisplayOptions {
+        let uid_display_format = UIDDisplayFormat::from_u8(data & 0b00000111).expect("UID display format decoding should not fail");
+
+        DisplayOptions {
+            fingerprint_enroll_duplication_check:  data & 0b00100000 != 0,
+            auto_duty_code_shift_table_enabled:    data & 0b00010000 != 0,
+            show_wiegand_port_message_on_main_lcd: data & 0b00001000 != 0,
+            uid_display_format,
+        }
+    }
+
+    pub fn encode(&self) -> u8 {
+        let mut data = 0b00000000;
+        if self.fingerprint_enroll_duplication_check  { data += 0b00100000; }
+        if self.auto_duty_code_shift_table_enabled    { data += 0b00010000; }
+        if self.show_wiegand_port_message_on_main_lcd { data += 0b00001000; }
+        data += self.uid_display_format as u8;
+        data
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ControllerOptions {
+    pub main_port_door_number:    u8,
+    pub wiegand_port_door_number: u8,
+    pub edit_password:           u32,
+    pub master_user_range_start: u32,
+    pub master_user_range_end:   u32,
+    pub general_password:        u16,
+    pub duress_code:             u16,
+    // Data20-21: reserved
+    pub connected_reader_bitmask:     u16, // AR721Ev2 only
+    pub tag_hold_time:                u16, // 10ms
+    pub main_port_door_relay_time:    u16, // 10ms
+    pub wiegand_port_door_relay_time: u16, // 10ms
+    pub alarm_relay_time:             u16, // 10ms
+    pub main_port_options:             ControllerPortOptions,
+    pub wiegand_port_options:          ControllerPortOptions,
+    pub main_port_extended_options:    ExtendedControllerOptions,
+    pub wiegand_port_extended_options: ExtendedControllerOptions,
+    pub main_port_door_close_time:    u8, // seconds
+    pub wiegand_port_door_close_time: u8, // seconds
+    pub main_port_arming:    bool,
+    pub wiegand_port_arming: bool,
+    pub access_mode: ControllerAccessMode,
+    pub armed_output_pulse_width: u8, // 10 ms
+    pub arming_delay: u8, // seconds
+    pub alarm_delay:  u8, // seconds
+    pub uart_data: UARTData,
+    pub common_options: CommonOptions,
+    pub display_options: DisplayOptions,
+    pub keyboard_lock_error_times: Option<u8>, // version 2.5 and later
+    pub host_port_baud: Option<HostBaudRate>,  // version 2.5 and later
+    pub slave_flags: Option<SlaveFlags>,       // version 2.5 and later
+    pub operation_mode: Option<OperationMode>, // version 2.9 and later
+    pub main_port_egress_beeps: Option<u8>,    // version 3.3 and later
+    pub wiegand_port_egress_beeps: Option<u8>, // version 3.3 and later
+    // Data52: reserved
+}
+
+impl ControllerOptions {
+    pub fn decode(data: &[u8]) -> Result<ControllerOptions> {
+        if data.len() < 46 {
+            return Err(ProtocolError::NotEnoughData.into());
+        }
+
+        let main_port_door_number    = data[2];
+        let wiegand_port_door_number = data[3];
+        let edit_password = u32::from_be_bytes([data[4], data[5], data[6], data[7]]);
+        let master_user_range_start = u32::from_be_bytes([data[8], data[9], data[10], data[11]]);
+        let master_user_range_end   = u32::from_be_bytes([data[12], data[13], data[14], data[15]]);
+        let general_password        = u16::from_be_bytes([data[16], data[17]]);
+        let duress_code             = u16::from_be_bytes([data[18], data[19]]);
+        // Data 20-21 reserved
+        let connected_reader_bitmask = u16::from_be_bytes([data[22], data[23]]);
+        let tag_hold_time = u16::from_be_bytes([data[24], data[25]]);
+        let main_port_door_relay_time    = u16::from_be_bytes([data[26], data[27]]);
+        let wiegand_port_door_relay_time = u16::from_be_bytes([data[28], data[29]]);
+        let alarm_relay_time = u16::from_be_bytes([data[30], data[31]]);
+        let main_port_options    = ControllerPortOptions::decode(data[32]);
+        let wiegand_port_options = ControllerPortOptions::decode(data[33]);
+        let main_port_extended_options    = ExtendedControllerOptions::decode(data[34]);
+        let wiegand_port_extended_options = ExtendedControllerOptions::decode(data[35]);
+        let main_port_door_close_time    = data[36];
+        let wiegand_port_door_close_time = data[37];
+        let main_port_arming    = data[38] & 0b00000001 != 0;
+        let wiegand_port_arming = data[38] & 0b00000010 != 0;
+        let access_mode = ControllerAccessMode::from_u8(data[39]).ok_or(ProtocolError::UnknownControllerAccessMode)?;
+        let armed_output_pulse_width = data[40];
+        let arming_delay = data[41];
+        let alarm_delay =  data[42];
+        let uart_data = UARTData::decode(data[43])?;
+        let common_options = CommonOptions::decode(data[44]);
+        let display_options = DisplayOptions::decode(data[45]);
+        let keyboard_lock_error_times = Some(data[46]);
+        let host_port_baud = Some(HostBaudRate::from_u8(data[47]).ok_or(ProtocolError::UnknownHostBaudRate)?);
+        let slave_flags = Some(SlaveFlags::decode(data[48]));
+        let operation_mode = Some(OperationMode::from_u8(data[49]).ok_or(ProtocolError::UnknownOperationMode)?);
+        let main_port_egress_beeps = Some(data[50]);
+        let wiegand_port_egress_beeps = Some(data[51]);
+
+        Ok(ControllerOptions {
+            main_port_door_number,
+            wiegand_port_door_number,
+            edit_password,
+            master_user_range_start,
+            master_user_range_end,
+            general_password,
+            duress_code,
+            connected_reader_bitmask,
+            tag_hold_time,
+            main_port_door_relay_time,
+            wiegand_port_door_relay_time,
+            alarm_relay_time,
+            main_port_options,
+            wiegand_port_options,
+            main_port_extended_options,
+            wiegand_port_extended_options,
+            main_port_door_close_time,
+            wiegand_port_door_close_time,
+            main_port_arming,
+            wiegand_port_arming,
+            access_mode,
+            armed_output_pulse_width,
+            arming_delay,
+            alarm_delay,
+            uart_data,
+            common_options,
+            display_options,
+            keyboard_lock_error_times,
+            host_port_baud,
+            slave_flags,
+            operation_mode,
+            main_port_egress_beeps,
+            wiegand_port_egress_beeps,
+        })
+    }
+
+    // TODO make this version dependant - 67 = 0x43 == 4.3???
+    pub fn encode(&self) -> Vec<u8> {
+        let mut data = Vec::<u8>::new();
+        data.push(self.main_port_door_number);
+        data.push(self.wiegand_port_door_number);
+        data.extend_from_slice(&self.edit_password.to_be_bytes());
+        data.extend_from_slice(&self.master_user_range_start.to_be_bytes());
+        data.extend_from_slice(&self.master_user_range_end.to_be_bytes());
+        data.extend_from_slice(&self.general_password.to_be_bytes());
+        data.extend_from_slice(&self.duress_code.to_be_bytes());
+        data.extend_from_slice(&vec![0x00, 0x00]); // reserved
+        data.extend_from_slice(&self.connected_reader_bitmask.to_be_bytes()); // doc error, bytes22-23 duplicated? must be zero?
+        data.extend_from_slice(&self.tag_hold_time.to_be_bytes());
+        data.extend_from_slice(&self.main_port_door_relay_time.to_be_bytes());
+        data.extend_from_slice(&self.wiegand_port_door_relay_time.to_be_bytes());
+        data.extend_from_slice(&self.alarm_relay_time.to_be_bytes());
+        data.push(self.main_port_options.encode());
+        data.push(self.wiegand_port_options.encode());
+        data.push(self.main_port_extended_options.encode(true));
+        data.push(self.wiegand_port_extended_options.encode(false));
+        data.push(self.main_port_door_close_time);
+        data.push(self.wiegand_port_door_close_time);
+
+        let mut arming_status = 0x00000000;
+        if self.main_port_arming { arming_status += 0b00000001; }
+        if self.wiegand_port_arming { arming_status += 0b00000010; }
+        data.push(arming_status);
+
+        data.push(self.access_mode as u8);
+        data.push(self.armed_output_pulse_width);
+        data.push(self.arming_delay);
+        data.push(self.alarm_delay);
+        data.push(self.uart_data.encode());
+        data.push(self.common_options.encode());
+        data.push(self.display_options.encode());
+
+        if let Some(d) = self.keyboard_lock_error_times { data.push(d); }
+        if let Some(d) = self.host_port_baud { data.push(d as u8); }
+        if let Some(d) = self.slave_flags { data.push(d.encode()); }
+        if let Some(d) = self.operation_mode { data.push(d as u8); }
+        if let Some(d) = self.main_port_egress_beeps { data.push(d); }
+        if let Some(d) = self.wiegand_port_egress_beeps { data.push(d); }
+
+        data.push(0x00); // Data52: reserved
+
+        data
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ControllerPortOptions {
     pub anti_pass_back_enabled: bool,
     pub anti_pass_back_in: bool,
     pub force_open_alarm: bool,
@@ -164,9 +521,9 @@ pub struct ControllerOptions {
     pub time_attendance_disabled: bool,
 }
 
-impl ControllerOptions {
-    pub fn decode(data: u8) -> ControllerOptions {
-        ControllerOptions {
+impl ControllerPortOptions {
+    pub fn decode(data: u8) -> ControllerPortOptions {
+        ControllerPortOptions {
             anti_pass_back_enabled:   data & 0b10000000 != 0,
             anti_pass_back_in:        data & 0b01000000 != 0,
             force_open_alarm:         data & 0b00100000 != 0,
@@ -177,7 +534,65 @@ impl ControllerOptions {
             time_attendance_disabled: data & 0b00000001 != 0,
         }
     }
+
+    pub fn encode(&self) -> u8 {
+        let mut data = 0b00000000;
+        if self.anti_pass_back_enabled   { data += 0b10000000; }
+        if self.anti_pass_back_in        { data += 0b01000000; }
+        if self.force_open_alarm         { data += 0b00100000; }
+        if self.egress_button            { data += 0b00010000; }
+        if self.skip_pin_check           { data += 0b00001000; }
+        if self.auto_open_zone           { data += 0b00000100; }
+        if self.auto_lock_door           { data += 0b00000010; }
+        if self.time_attendance_disabled { data += 0b00000001; }
+        data
+    }
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExtendedControllerOptions {
+    pub door_relay_active_in_auto_open_time_zone: bool,
+    pub stop_alarm_at_door_closed: bool,
+    pub free_tag_access_mode: bool,
+    pub use_main_door_relay_for_wiegand_port: bool,
+    pub auto_disarmed_time_zone: bool,
+    pub key_pad_inhibited: bool,
+    pub fingerprint_only_enabled: bool,
+    pub egress_button_sound: bool,
+}
+
+impl ExtendedControllerOptions {
+    pub fn decode(data: u8) -> ExtendedControllerOptions {
+        ExtendedControllerOptions {
+            door_relay_active_in_auto_open_time_zone: data & 0b10000000 != 0,
+            stop_alarm_at_door_closed:                data & 0b01000000 != 0,
+            free_tag_access_mode:                     data & 0b00100000 != 0,
+            use_main_door_relay_for_wiegand_port:     data & 0b00010000 != 0, // only present for wiegand port
+            auto_disarmed_time_zone:                  data & 0b00001000 != 0,
+            key_pad_inhibited:                        data & 0b00000100 != 0,
+            fingerprint_only_enabled:                 data & 0b00000010 != 0, // only present for main port
+            egress_button_sound:                      data & 0b00000001 != 0,
+        }
+    }
+
+    pub fn encode(&self, main_port: bool) -> u8 {
+        let mut data = 0b00000000;
+        if self.door_relay_active_in_auto_open_time_zone { data += 0b10000000; }
+        if self.stop_alarm_at_door_closed                { data += 0b01000000; }
+        if self.free_tag_access_mode                     { data += 0b00100000; }
+        if !main_port {
+            if self.use_main_door_relay_for_wiegand_port { data += 0b00010000; }
+        }
+        if self.auto_disarmed_time_zone                  { data += 0b00001000; }
+        if self.key_pad_inhibited                        { data += 0b00000100; }
+        if main_port {
+            if self.fingerprint_only_enabled             { data += 0b00000010; }
+        }
+        if self.egress_button_sound                      { data += 0b00000001; }
+        data
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DIPortStatus {
@@ -218,37 +633,10 @@ impl RelayPortStatus {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ExtendedControllerOptions {
-    pub door_relay_active_in_auto_open_time_zone: bool,
-    pub stop_alarm_at_door_closed: bool,
-    pub free_tag_access_mode: bool,
-    pub use_main_door_relay_for_wiegand_port: bool,
-    pub auto_disarmed_time_zone: bool,
-    pub key_pad_inhibited: bool,
-    pub egress_button_sound: bool,
-}
-
-impl ExtendedControllerOptions {
-    pub fn decode(data: u8) -> ExtendedControllerOptions {
-        ExtendedControllerOptions {
-            door_relay_active_in_auto_open_time_zone: data & 0b10000000 != 0,
-            stop_alarm_at_door_closed:                data & 0b01000000 != 0,
-            free_tag_access_mode:                     data & 0b00100000 != 0,
-            use_main_door_relay_for_wiegand_port:     data & 0b00010000 != 0,
-            auto_disarmed_time_zone:                  data & 0b00001000 != 0,
-            key_pad_inhibited:                        data & 0b00000100 != 0,
-            // reserved                               data & 0b00000010 != 0,
-            egress_button_sound:                      data & 0b00000001 != 0,
-        }
-    }
-}
-
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IoStatusData {
     pub status_data: StatusData,
     pub alarm_type: Option<AlarmType>,
-    pub controller_options: ControllerOptions,
+    pub controller_options: ControllerPortOptions,
 }
 
 impl IoStatusData {
@@ -258,7 +646,7 @@ impl IoStatusData {
             true => Some(AlarmType::decode(data[1])),
             false => None,
         };
-        let controller_options = ControllerOptions::decode(data[2]);
+        let controller_options = ControllerPortOptions::decode(data[2]);
         // data[3] RFU
 
         Ok(IoStatusData {
@@ -273,7 +661,7 @@ impl IoStatusData {
 pub struct AllKeysPressedData {
     pub fifth_key_data: Option<u8>,
     pub input_value: u16,
-    pub device_params: ControllerOptions,
+    pub device_params: ControllerPortOptions,
     //elevator_controller_params: ElevatorControllerParams, // 401RO16’s parameter (24*xxx#) // TODO implement
     //key_data: KeyData, // TODO implement
 }
@@ -285,7 +673,7 @@ impl AllKeysPressedData {
         }
         let fifth_key_data = if data[0] & 0b1000000 != 0 { Some(data[0]) } else { None };
         let input_value = u16::from_be_bytes([data[1], data[2]]);
-        let device_params = ControllerOptions::decode(data[4]);
+        let device_params = ControllerPortOptions::decode(data[4]);
 
         Ok(AllKeysPressedData {
             input_value,
@@ -303,7 +691,7 @@ pub struct NewCardPresentData {
     pub input_value: u16, // if there was no input before flashing card this shows the previous value
     pub card_code: u16,
     pub id_em4001: u8,
-    pub device_params: ControllerOptions,
+    pub device_params: ControllerPortOptions,
     pub from_wiegand: bool,
     pub setting_forced_open_alarm: bool,
 }
@@ -318,7 +706,7 @@ impl NewCardPresentData {
         let card_code    = u16::from_be_bytes([data[5], data[6]]);
         let id_em4001    = data[7];
 
-        let device_params = ControllerOptions::decode(data[8]);
+        let device_params = ControllerPortOptions::decode(data[8]);
 
         let from_wiegand =              data[9] & 0b1000000 != 0;
         let setting_forced_open_alarm = data[9] & 0b0100000 != 0;
@@ -385,7 +773,7 @@ impl ControllerStatus {
 }
 
 enum_from_primitive! {
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum EventFunctionCode {
     SiteCodeError                    = 0,
     InvalidUserPIN                   = 1,
@@ -473,7 +861,7 @@ pub enum EventFunctionCode {
 }
 
 enum_from_primitive! {
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum PortNumber {
     MainPort     = 17,
     WiegandPort1 = 18,
@@ -726,6 +1114,7 @@ impl IpAndMacAddress {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum RelayCommand {
     GetCurrentStatus  = 0x00,
     EnableArmedState  = 0x80,
@@ -744,7 +1133,7 @@ mod tests {
 
     #[test]
     fn decode_controller_options() {
-        assert_eq!(ControllerOptions::decode(16), ControllerOptions {
+        assert_eq!(ControllerPortOptions::decode(16), ControllerPortOptions {
             anti_pass_back_enabled: false,
             anti_pass_back_in: false,
             force_open_alarm: false,
@@ -755,7 +1144,7 @@ mod tests {
             time_attendance_disabled: false
         });
 
-        assert_eq!(ControllerOptions::decode(15), ControllerOptions {
+        assert_eq!(ControllerPortOptions::decode(15), ControllerPortOptions {
             anti_pass_back_enabled: false,
             anti_pass_back_in: false,
             force_open_alarm: false,

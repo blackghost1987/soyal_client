@@ -3,6 +3,8 @@
 pub mod api_types;
 pub mod response;
 pub mod request;
+pub mod structs;
+pub mod enums;
 
 use crate::api_types::*;
 use crate::request::*;
@@ -112,10 +114,11 @@ impl SoyalClient {
         handle_ack_or_nack(raw)
     }
 
-    // TODO implement and turn off that damn force_open_alarm...
-    /*pub fn set_controller_options(&self) -> Result<ControllerOptionsResponse> {
-        self.set_controller_params(ControllerParamSubCommand::ControllerOptionParams)
-    }*/
+    pub fn set_controller_options(&self, new_node_id: u8, params: ControllerOptions) -> Result<Either<AckResponse, NackResponse>> {
+        let mut data = vec![new_node_id];
+        data.extend(params.encode());
+        self.set_controller_params(ControllerParamSubCommand::ControllerOptionParams, &data)
+    }
 
     pub fn set_remote_tcp_server_params(&self, params: RemoteTCPServerParams) -> Result<Either<AckResponse, NackResponse>> {
         let data = params.encode();

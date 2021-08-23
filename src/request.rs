@@ -35,6 +35,7 @@ pub enum Command {
 }
 
 enum_from_primitive! {
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ControllerParamSubCommand {
     ControllerOptionParams = 0x00,
     AutoOpenTimeZone       = 0x01,
