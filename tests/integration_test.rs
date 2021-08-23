@@ -97,7 +97,7 @@ fn test_set_controller_options() {
         wiegand_port_door_close_time: 15,
         main_port_arming: false,
         wiegand_port_arming: false,
-        access_mode: ControllerAccessMode::PinOnly,
+        access_mode: ControllerAccessMode::PINOnly,
         armed_output_pulse_width: 0,
         arming_delay: 1,
         alarm_delay: 1,

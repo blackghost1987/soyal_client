@@ -677,7 +677,7 @@ mod tests {
             assert_eq!(o.controller_options.wiegand_port_door_close_time, 15);
             assert_eq!(o.controller_options.main_port_arming, false);
             assert_eq!(o.controller_options.wiegand_port_arming, false);
-            assert_eq!(o.controller_options.access_mode, ControllerAccessMode::PinOnly);
+            assert_eq!(o.controller_options.access_mode, ControllerAccessMode::PINOnly);
             assert_eq!(o.controller_options.armed_output_pulse_width, 0);
             assert_eq!(o.controller_options.arming_delay, 1);
             assert_eq!(o.controller_options.alarm_delay, 1);

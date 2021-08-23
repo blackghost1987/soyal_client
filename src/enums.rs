@@ -34,8 +34,8 @@ pub enum ControllerType {
 enum_from_primitive! {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ControllerAccessMode {
-    PinOnly           = 8, // 4 digit PIN
-    UserAddressAndPin = 4, // 5 digit address + 4 digit PIN
+    PINOnly           = 8, // 4 digit PIN
+    UserAddressAndPIN = 4, // 5 digit address + 4 digit PIN
 }
 }
 
@@ -44,7 +44,7 @@ pub enum UserAccessMode {
     Invalid,
     ReadOnly,
     CardOrPIN,
-    CardPlusPin,
+    CardPlusPIN,
 }
 
 impl UserAccessMode {
@@ -53,7 +53,7 @@ impl UserAccessMode {
             (false, false) => UserAccessMode::Invalid,
             (false, true)  => UserAccessMode::ReadOnly,
             (true, false)  => UserAccessMode::CardOrPIN,
-            (true, true)   => UserAccessMode::CardPlusPin,
+            (true, true)   => UserAccessMode::CardPlusPIN,
         }
     }
 
@@ -62,7 +62,7 @@ impl UserAccessMode {
             UserAccessMode::Invalid =>     0b00000000,
             UserAccessMode::ReadOnly =>    0b00000001,
             UserAccessMode::CardOrPIN =>   0b00000010,
-            UserAccessMode::CardPlusPin => 0b00000011,
+            UserAccessMode::CardPlusPIN => 0b00000011,
         }
     }
 }
