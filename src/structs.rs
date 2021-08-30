@@ -867,8 +867,6 @@ impl IpAndMacAddress {
     }
 }
 
-
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClockData {
     pub time: DateTime<Local>,
@@ -921,7 +919,7 @@ mod tests {
             skip_pin_check: false,
             auto_open_zone: false,
             auto_lock_door: false,
-            time_attendance_disabled: false
+            time_attendance_disabled: false,
         });
 
         assert_eq!(ControllerPortOptions::decode(15), ControllerPortOptions {
@@ -932,7 +930,7 @@ mod tests {
             skip_pin_check: true,
             auto_open_zone: true,
             auto_lock_door: true,
-            time_attendance_disabled: true
+            time_attendance_disabled: true,
         });
     }
 

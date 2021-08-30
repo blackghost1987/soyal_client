@@ -1,4 +1,5 @@
-#[macro_use] extern crate enum_primitive;
+#[macro_use]
+extern crate enum_primitive;
 
 pub mod common;
 pub mod response;
@@ -26,8 +27,6 @@ pub struct AccessData {
     pub ip: IpAddr,
     pub port: u16,
     pub destination_id: u8,
-    //pub username: String,
-    //pub password: String, // FIXME why is this not needed?
 }
 
 pub struct SoyalClient {
@@ -38,7 +37,7 @@ pub struct SoyalClient {
 impl SoyalClient {
     pub fn new(access_data: AccessData, debug_log: Option<bool>) -> SoyalClient {
         SoyalClient {
-            access_data: access_data,
+            access_data,
             debug_log: debug_log.unwrap_or(false),
         }
     }
@@ -55,7 +54,7 @@ impl SoyalClient {
         let message = ExtendedMessage {
             destination_id: self.access_data.destination_id,
             command,
-            data
+            data,
         };
 
         let _ = stream.write(&message.encode())?;
@@ -75,7 +74,7 @@ impl SoyalClient {
         self.send(Command::GetControllerParams, &[sub_code as u8])
     }
 
-    pub fn get_controller_params<T>(&self, sub_code: ControllerParamSubCommand) -> Result<T> where T: Response<T>{
+    pub fn get_controller_params<T>(&self, sub_code: ControllerParamSubCommand) -> Result<T> where T: Response<T> {
         let raw = self.get_controller_params_inner(sub_code)?;
         if raw.is_empty() {
             return Err(ProtocolError::NoResponse.into());
@@ -147,7 +146,7 @@ impl SoyalClient {
             Ok(x) => Ok(Either::Left(x)),
             Err(_) => {
                 if raw[7] == 0xFF {
-                    return Err(ProtocolError::EventLogOutOfRange.into())
+                    return Err(ProtocolError::EventLogOutOfRange.into());
                 }
                 EventLogResponse::decode(&raw).map(Either::Right)
             }

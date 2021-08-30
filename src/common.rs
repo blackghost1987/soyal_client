@@ -36,21 +36,21 @@ pub enum ProtocolError {
 }
 
 #[derive(Debug)]
-pub enum ClientError {
+pub enum Error {
     IOError(std::io::Error),
     ProtocolError(ProtocolError),
 }
 
-impl convert::From<std::io::Error> for ClientError {
-    fn from(e: std::io::Error) -> ClientError {
-        ClientError::IOError(e)
+impl convert::From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Error {
+        Error::IOError(e)
     }
 }
 
-impl convert::From<ProtocolError> for ClientError {
-    fn from(e: ProtocolError) -> ClientError {
-        ClientError::ProtocolError(e)
+impl convert::From<ProtocolError> for Error {
+    fn from(e: ProtocolError) -> Error {
+        Error::ProtocolError(e)
     }
 }
 
-pub type Result<T> = result::Result<T, ClientError>;
+pub type Result<T> = result::Result<T, Error>;

@@ -6,7 +6,7 @@ use macaddr::MacAddr6;
 use soyal_client::structs::*;
 use soyal_client::enums::*;
 
-// WARNING: Hardware-in-the-loop tests! Set real access data here:
+// WARNING: Hardware-in-the-loop tests! Set real device IP here:
 const IP_ADDR: [u8; 4] = [192, 168, 1, 127];
 
 fn create_client() -> SoyalClient {
