@@ -10,7 +10,7 @@ pub enum Command {
     HostingPolling                   = 0x18,
     SetControllerParams              = 0x20,
     RelayOnOffControl                = 0x21,
-    SetupRealTimeClock               = 0x23,
+    SetRealTimeClock                 = 0x23,
     GetRealTimeClock                 = 0x24,
     GetOldestEventLog                = 0x25,
     BuzzerSounds                     = 0x26,
@@ -62,7 +62,7 @@ pub enum ControllerParamSubCommand {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtendedMessage<'a> {
     pub destination_id: u8, // 0x00: bus master, 0xFF: broadcast
-    pub command_code: u8,
+    pub command: Command,
     pub data: &'a [u8],
 }
 
@@ -74,16 +74,18 @@ impl<'a> ExtendedMessage<'a> {
 
         let full_length: u16 = length + 4 + 2; // 4 header + 2 length bytes
 
+        let command_code = self.command as u8;
+
         let mut buffer = Vec::<u8>::with_capacity(full_length as usize);
         buffer.extend_from_slice(&EXTENDED_HEADER);
         buffer.extend_from_slice(&length.to_be_bytes());
         buffer.push(self.destination_id);
-        buffer.push(self.command_code);
+        buffer.push(command_code);
         buffer.extend_from_slice(&self.data);
 
         let mut xor_res: u8 = 0xFF;
         xor_res.bitxor_assign(self.destination_id);
-        xor_res.bitxor_assign(self.command_code);
+        xor_res.bitxor_assign(command_code);
         for d in self.data {
             xor_res.bitxor_assign(d);
         }
@@ -91,7 +93,7 @@ impl<'a> ExtendedMessage<'a> {
 
         let mut sum_res: u8 = 0;
         sum_res = sum_res.wrapping_add(self.destination_id);
-        sum_res = sum_res.wrapping_add(self.command_code);
+        sum_res = sum_res.wrapping_add(command_code);
         for d in self.data {
             sum_res = sum_res.wrapping_add(*d);
         }
@@ -110,7 +112,7 @@ mod tests {
     fn encode_no_data() {
         let d = ExtendedMessage {
             destination_id: 1,
-            command_code: Command::HostingPolling as u8,
+            command: Command::HostingPolling,
             data: &[],
         };
         assert_eq!(d.encode(), vec!(0xFF, 0x00, 0x5A, 0xA5, 0x00, 0x04, 0x01, 0x18, 0xE6, 0xFF))
@@ -120,7 +122,7 @@ mod tests {
     fn encode_with_data() {
         let d = ExtendedMessage {
             destination_id: 1,
-            command_code: Command::HostingPolling as u8,
+            command: Command::HostingPolling,
             data: &[0x01, 0x02],
         };
         assert_eq!(d.encode(), vec!(0xFF, 0x00, 0x5A, 0xA5, 0x00, 0x06, 0x01, 0x18, 0x01, 0x02, 0xE5, 0x01))

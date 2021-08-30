@@ -18,6 +18,7 @@ use serde::Serialize;
 use std::io;
 use either::Either;
 use semver::Version;
+use chrono::{DateTime, Local, Timelike, Datelike};
 
 
 #[derive(Clone, Debug, Serialize)]
@@ -43,9 +44,8 @@ impl SoyalClient {
     }
 
     fn send(&self, command: Command, data: &[u8]) -> io::Result<Vec<u8>> {
-        let command_code = command as u8;
         if self.debug_log {
-            println!("Sending command {:?} ({:#X?}) (with data {:?}) to {:?}", command, command_code, data, self.access_data);
+            println!("Sending command {:?} (with data {:?}) to {:?}", command, data, self.access_data);
         }
 
         let address = SocketAddr::new(self.access_data.ip, self.access_data.port);
@@ -54,7 +54,7 @@ impl SoyalClient {
 
         let message = ExtendedMessage {
             destination_id: self.access_data.destination_id,
-            command_code: command_code,
+            command,
             data
         };
 
@@ -109,7 +109,7 @@ impl SoyalClient {
 
     //*** CONTROLLER PARAMETER SETTERS
 
-    pub fn set_controller_params(&self, sub_code: ControllerParamSubCommand, data: &Vec<u8>) -> Result<Either<AckResponse, NackResponse>> {
+    pub fn set_controller_params(&self, sub_code: ControllerParamSubCommand, data: &Vec<u8>) -> Result<AckOrNack> {
         let mut bytes = Vec::<u8>::new();
         bytes.push(sub_code as u8);
         bytes.extend_from_slice(&data);
@@ -117,24 +117,24 @@ impl SoyalClient {
         handle_ack_or_nack(raw)
     }
 
-    pub fn set_controller_options(&self, new_node_id: u8, params: ControllerOptions) -> Result<Either<AckResponse, NackResponse>> {
+    pub fn set_controller_options(&self, new_node_id: u8, params: ControllerOptions) -> Result<AckOrNack> {
         let mut data = vec![new_node_id];
         let param_data = params.encode(Version::new(4, 3, 0))?;
         data.extend(&param_data);
         self.set_controller_params(ControllerParamSubCommand::ControllerOptionParams, &data)
     }
 
-    pub fn set_remote_tcp_server_params(&self, params: RemoteTCPServerParams) -> Result<Either<AckResponse, NackResponse>> {
+    pub fn set_remote_tcp_server_params(&self, params: RemoteTCPServerParams) -> Result<AckOrNack> {
         let data = params.encode();
         self.set_controller_params(ControllerParamSubCommand::RemoteTCPServerParams, &data)
     }
 
-    pub fn set_ip_and_mac_address(&self, params: IpAndMacAddress) -> Result<Either<AckResponse, NackResponse>> {
+    pub fn set_ip_and_mac_address(&self, params: IpAndMacAddress) -> Result<AckOrNack> {
         let data = params.encode();
         self.set_controller_params(ControllerParamSubCommand::IpAndMacAddress, &data)
     }
 
-    //*** GENERIC COMMANDS
+    //*** GENERIC GETTERS
 
     pub fn get_reader_status(&self) -> Result<ControllerStatusResponse> {
         let raw = self.send(Command::HostingPolling, &[])?;
@@ -175,16 +175,6 @@ impl SoyalClient {
         EventLogStatusResponse::decode(&raw)
     }
 
-    pub fn remove_oldest_event_log(&self) -> Result<Either<AckResponse, NackResponse>> {
-        let raw = self.send(Command::RemoveOldestEventLog, &[])?;
-        handle_ack_or_nack(raw)
-    }
-
-    pub fn empty_event_log(&self) -> Result<Either<AckResponse, NackResponse>> {
-        let raw = self.send(Command::EmptyEventLog, &[])?;
-        handle_ack_or_nack(raw)
-    }
-
     pub fn get_user_parameters(&self, user_address: u16) -> Result<UserParametersResponse> {
         let mut data = user_address.to_be_bytes().to_vec();
 
@@ -196,7 +186,24 @@ impl SoyalClient {
         UserParametersResponse::decode(&raw)
     }
 
-    pub fn set_user_parameters(&self, user_address: u16, user_params: UserParameters) -> Result<Either<AckResponse, NackResponse>> {
+    pub fn get_real_time_clock(&self) -> Result<RealTimeClockResponse> {
+        let raw = self.send(Command::GetRealTimeClock, &[])?;
+        RealTimeClockResponse::decode(&raw)
+    }
+
+    //*** GENERIC SETTERS
+
+    pub fn remove_oldest_event_log(&self) -> Result<AckOrNack> {
+        let raw = self.send(Command::RemoveOldestEventLog, &[])?;
+        handle_ack_or_nack(raw)
+    }
+
+    pub fn empty_event_log(&self) -> Result<AckOrNack> {
+        let raw = self.send(Command::EmptyEventLog, &[])?;
+        handle_ack_or_nack(raw)
+    }
+
+    pub fn set_user_parameters(&self, user_address: u16, user_params: UserParameters) -> Result<AckOrNack> {
         let mut data: Vec<u8> = vec![0x01]; // only sending 1 user data
         data.extend_from_slice(&user_address.to_be_bytes());
 
@@ -217,5 +224,17 @@ impl SoyalClient {
         RelayStatusResponse::decode(&raw)
     }
 
-    // TODO Setup real time clock of target device (0x23)
+    pub fn set_real_time_clock(&self, time: DateTime<Local>) -> Result<AckOrNack> {
+        let mut data = Vec::<u8>::new();
+        data.push(time.second() as u8);
+        data.push(time.minute() as u8);
+        data.push(time.hour() as u8);
+        data.push(time.weekday().number_from_sunday() as u8);
+        data.push(time.day() as u8);
+        data.push(time.month() as u8);
+        data.push((time.year() - 2000) as u8);
+
+        let raw = self.send(Command::SetRealTimeClock, &data)?;
+        handle_ack_or_nack(raw)
+    }
 }

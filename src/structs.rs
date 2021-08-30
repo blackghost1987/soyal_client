@@ -6,7 +6,7 @@ use std::net::Ipv4Addr;
 
 use semver::Version;
 use serde::{Serialize, Deserialize};
-use chrono::{NaiveDate, Datelike};
+use chrono::{NaiveDate, Datelike, DateTime, Local, TimeZone};
 use macaddr::MacAddr6;
 use enum_primitive::FromPrimitive;
 
@@ -864,6 +864,46 @@ impl IpAndMacAddress {
         data.extend_from_slice(&self.http_server_port.to_be_bytes());
 
         data
+    }
+}
+
+
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ClockData {
+    pub time: DateTime<Local>,
+    pub firmware_version: semver::Version,
+    pub firmware_identify_code: u8,
+    pub controller_type: ControllerType,
+}
+
+impl ClockData {
+    pub fn decode(data: &[u8]) -> Result<ClockData> {
+        if data.len() < 12 {
+            return Err(ProtocolError::MessageTooShort.into())
+        }
+
+        let year = 2000 + data[6] as i32;
+        let month = data[5] as u32;
+        let day = data[4] as u32;
+        let hour = data[2] as u32;
+        let minute = data[1] as u32;
+        let second = data[0] as u32;
+        let time = Local.ymd(year, month, day).and_hms(hour, minute, second);
+
+        let firmware_major = (data[7] & 0xF0) >> 4;
+        let firmware_minor = data[7] & 0x0F;
+        let firmware_version = semver::Version::new(firmware_major as u64, firmware_minor as u64, 0);
+        // data 8-9 reserved
+        let firmware_identify_code = data[10];
+        let controller_type = ControllerType::from_u8(data[11]).ok_or(ProtocolError::UnknownControllerType)?;
+
+        Ok(ClockData {
+            time,
+            firmware_version,
+            firmware_identify_code,
+            controller_type,
+        })
     }
 }
 

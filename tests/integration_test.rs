@@ -1,7 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr};
 
 use soyal_client::*;
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Local};
 use macaddr::MacAddr6;
 use soyal_client::structs::*;
 use soyal_client::enums::*;
@@ -292,5 +292,23 @@ fn test_set_relay_control() {
     let client = create_client();
     let res = client.relay_control(RelayCommand::DoorRelayPulse, PortNumber::AllPorts);
     println!("Relay status after enable: {:?}", res);
+    assert!(res.is_ok());
+}
+
+#[test]
+#[ignore]
+fn test_get_clock() {
+    let client = create_client();
+    let res = client.get_real_time_clock();
+    println!("Get RTC response: {:?}", res);
+    assert!(res.is_ok());
+}
+
+#[test]
+#[ignore]
+fn test_set_clock() {
+    let client = create_client();
+    let res = client.set_real_time_clock(Local::now());
+    println!("Set RTC response: {:?}", res);
     assert!(res.is_ok());
 }

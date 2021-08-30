@@ -340,7 +340,7 @@ impl Response<EventLogStatusResponse> for EventLogStatusResponse {
     }
 }
 
-pub fn handle_ack_or_nack(raw: Vec<u8>) -> Result<Either<AckResponse, NackResponse>> {
+pub fn handle_ack_or_nack(raw: Vec<u8>) -> Result<AckOrNack> {
     match AckResponse::decode(&raw) {
         Ok(x) => Ok(Either::Left(x)),
         Err(_) => NackResponse::decode(&raw).map(Either::Right)
@@ -396,6 +396,8 @@ impl Response<NackResponse> for NackResponse {
         })
     }
 }
+
+pub type AckOrNack = Either<AckResponse, NackResponse>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventLogResponse {
@@ -547,6 +549,31 @@ impl Response<RelayStatusResponse> for RelayStatusResponse {
             wiegand_port_options,
             main_port_arming,
             wiegand_port_arming,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RealTimeClockResponse {
+    pub destination_id: u8,
+    pub command: EchoCode,
+    pub source: u8,
+    pub clock: ClockData,
+}
+
+impl Response<RealTimeClockResponse> for RealTimeClockResponse {
+    fn decode(raw: &Vec<u8>) -> Result<RealTimeClockResponse> {
+        let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
+        let data = parts.data;
+
+        let source = data[0];
+        let clock = ClockData::decode(&data[1..])?;
+
+        Ok(RealTimeClockResponse {
+            destination_id: parts.destination_id,
+            command: parts.command,
+            source,
+            clock,
         })
     }
 }
