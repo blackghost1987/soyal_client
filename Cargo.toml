@@ -5,6 +5,7 @@ edition = "2018"
 license = "MIT"
 authors = ["Juhasz Sandor <blackghost1987@gmail.com>"]
 description = "Soyal Card reader protocol implementation"
+repository = "https://github.com/blackghost1987/soyal_client/"
 
 [dependencies]
 chrono = { version =  "0.4", features = ["serde"] }
