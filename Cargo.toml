@@ -2,7 +2,9 @@
 name = "soyal_client"
 version = "0.1.0"
 edition = "2018"
+license = "MIT"
 authors = ["Juhasz Sandor <blackghost1987@gmail.com>"]
+description = "Soyal Card reader protocol implementation"
 
 [dependencies]
 chrono = { version =  "0.4", features = ["serde"] }
