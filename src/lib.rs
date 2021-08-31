@@ -7,7 +7,7 @@ pub mod request;
 pub mod structs;
 pub mod enums;
 
-use crate::common::*;
+pub use crate::common::*;
 use crate::enums::*;
 use crate::structs::*;
 use crate::request::*;
@@ -20,6 +20,7 @@ use std::io;
 use either::Either;
 use semver::Version;
 use chrono::{DateTime, Local, Timelike, Datelike};
+use std::time::Duration;
 
 
 #[derive(Clone, Debug, Serialize)]
@@ -31,7 +32,7 @@ pub struct AccessData {
 
 pub struct SoyalClient {
     access_data: AccessData,
-    debug_log: bool,
+    debug_log: bool, // TODO get rid of this, use trace level logging
 }
 
 impl SoyalClient {
@@ -49,7 +50,7 @@ impl SoyalClient {
 
         let address = SocketAddr::new(self.access_data.ip, self.access_data.port);
 
-        let mut stream = TcpStream::connect(address)?;
+        let mut stream = TcpStream::connect_timeout(&address, Duration::from_secs(5))?;
 
         let message = ExtendedMessage {
             destination_id: self.access_data.destination_id,
@@ -59,6 +60,7 @@ impl SoyalClient {
 
         let _ = stream.write(&message.encode())?;
         let mut buffer = [0; 128];
+        stream.set_read_timeout(Some(Duration::from_secs(5)))?;
         let size = stream.read(&mut buffer)?;
 
         if self.debug_log {
