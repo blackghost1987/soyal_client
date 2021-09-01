@@ -115,7 +115,7 @@ impl SoyalClient {
         bytes.push(sub_code as u8);
         bytes.extend_from_slice(&data);
         let raw = self.send(Command::SetControllerParams, &bytes)?;
-        handle_ack_or_nack(raw)
+        AckOrNack::handle(raw)
     }
 
     pub fn set_controller_options(&self, new_node_id: u8, params: ControllerOptions) -> Result<AckOrNack> {
@@ -196,12 +196,12 @@ impl SoyalClient {
 
     pub fn remove_oldest_event_log(&self) -> Result<AckOrNack> {
         let raw = self.send(Command::RemoveOldestEventLog, &[])?;
-        handle_ack_or_nack(raw)
+        AckOrNack::handle(raw)
     }
 
     pub fn empty_event_log(&self) -> Result<AckOrNack> {
         let raw = self.send(Command::EmptyEventLog, &[])?;
-        handle_ack_or_nack(raw)
+        AckOrNack::handle(raw)
     }
 
     pub fn set_user_parameters(&self, user_address: u16, user_params: UserParameters) -> Result<AckOrNack> {
@@ -211,7 +211,7 @@ impl SoyalClient {
         let user_data = user_params.encode();
         data.extend_from_slice(&user_data);
         let raw = self.send(Command::SetUserParamsWithAntiPassBack, &data)?;
-        handle_ack_or_nack(raw)
+        AckOrNack::handle(raw)
     }
 
     pub fn relay_control(&self, command: RelayCommand, port: PortNumber) -> Result<RelayStatusResponse> {
@@ -236,6 +236,6 @@ impl SoyalClient {
         data.push((time.year() - 2000) as u8);
 
         let raw = self.send(Command::SetRealTimeClock, &data)?;
-        handle_ack_or_nack(raw)
+        AckOrNack::handle(raw)
     }
 }

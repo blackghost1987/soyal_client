@@ -9,7 +9,7 @@ repository = "https://github.com/blackghost1987/soyal_client/"
 
 [dependencies]
 chrono = { version =  "0.4", features = ["serde"] }
-either = "1.6"
+either = { version = "1.6", features = ["serde"] }
 enum_primitive = "0.1"
 macaddr = { version = "1.0", features = ["serde_std"] }
 semver = { version = "1.0", features = ["serde"] }

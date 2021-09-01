@@ -33,6 +33,7 @@ pub enum ProtocolError {
     UserNotFound,
     VersionMismatch,
     NoResponse,
+    CommandNotAcknowledged,
 }
 
 #[derive(Debug)]

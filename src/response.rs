@@ -340,13 +340,6 @@ impl Response<EventLogStatusResponse> for EventLogStatusResponse {
     }
 }
 
-pub fn handle_ack_or_nack(raw: Vec<u8>) -> Result<AckOrNack> {
-    match AckResponse::decode(&raw) {
-        Ok(x) => Ok(Either::Left(x)),
-        Err(_) => NackResponse::decode(&raw).map(Either::Right)
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AckResponse {
     pub destination_id: u8,
@@ -397,7 +390,26 @@ impl Response<NackResponse> for NackResponse {
     }
 }
 
-pub type AckOrNack = Either<AckResponse, NackResponse>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AckOrNack {
+    res: Either<NackResponse, AckResponse>,
+}
+
+impl AckOrNack {
+    pub fn should_ack(&self) -> Result<AckResponse> {
+        match self.res.as_ref() {
+            Either::Left(_) => Err(ProtocolError::CommandNotAcknowledged.into()),
+            Either::Right(r) => Ok(r.to_owned()),
+        }
+    }
+
+    pub fn handle(raw: Vec<u8>) -> Result<AckOrNack> {
+        match AckResponse::decode(&raw) {
+            Ok(x) => Ok(Either::Right(x)),
+            Err(_) => NackResponse::decode(&raw).map(Either::Left),
+        }.map(|res| AckOrNack { res })
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventLogResponse {
