@@ -1,4 +1,4 @@
-use std::net::{IpAddr, Ipv4Addr};
+use std::net::Ipv4Addr;
 
 use soyal_client::*;
 use chrono::{NaiveDate, Local};
@@ -11,7 +11,7 @@ const IP_ADDR: [u8; 4] = [192, 168, 1, 127];
 
 fn create_client() -> SoyalClient {
     let access_data = AccessData {
-        ip: IpAddr::from(Ipv4Addr::from(IP_ADDR)),
+        ip: Ipv4Addr::from(IP_ADDR),
         port: 1621,
         destination_id: 1,
     };

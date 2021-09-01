@@ -14,7 +14,7 @@ use crate::request::*;
 use crate::response::*;
 
 use std::io::prelude::*;
-use std::net::{IpAddr, TcpStream, SocketAddr};
+use std::net::{Ipv4Addr, TcpStream, SocketAddr};
 use serde::Serialize;
 use std::io;
 use either::Either;
@@ -25,7 +25,7 @@ use std::time::Duration;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct AccessData {
-    pub ip: IpAddr,
+    pub ip: Ipv4Addr,
     pub port: u16,
     pub destination_id: u8,
 }
@@ -48,7 +48,7 @@ impl SoyalClient {
             println!("Sending command {:?} (with data {:?}) to {:?}", command, data, self.access_data);
         }
 
-        let address = SocketAddr::new(self.access_data.ip, self.access_data.port);
+        let address = SocketAddr::new(self.access_data.ip.into(), self.access_data.port);
 
         let mut stream = TcpStream::connect_timeout(&address, Duration::from_secs(5))?;
 
