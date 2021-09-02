@@ -255,7 +255,7 @@ fn test_get_user_params() {
 fn test_set_user_params() {
     let client = create_client();
     let user_params = UserParameters {
-        tag_uid: (0, 0, 131, 13316),
+        tag_id: TagId64::new(0, 0, 131, 13316),
         pin_code: 0,
         mode: UserMode {
             access_mode: UserAccessMode::CardOrPIN,

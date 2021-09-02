@@ -418,15 +418,15 @@ pub struct EventLogResponse {
     pub source: u8,
     pub timestamp: DateTime<Local>,
     pub port_number: PortNumber,
-    pub user_address_or_tag_id: u16,
-    pub tag_id_for_normal_access: (u16, u16),
+    pub user_address_or_tag_id: u16, // Normal Access: User ID Other: last 2 bytes of the Card UID // TODO make this an enum?
+    pub tag_id: TagId32,
     // Sub Code
     // Sub Func. // function code AlarmEvent
     // Ext Code
     // User level
     pub door_number: u8,
     pub sor_deduction_amount: u16,
-    pub sor_balance: u16,
+    pub sor_balance: u16, // or 8 byte UID???
     pub user_inputted_code: Option<u32>, // only available for function code InvalidUserPIN
 }
 
@@ -455,7 +455,7 @@ impl Response<EventLogResponse> for EventLogResponse {
         let port_number = PortNumber::from_u8(data[8]).ok_or(ProtocolError::UnknownPortNumber)?;
 
         let user_address_or_tag_id = u16::from_be_bytes([data[9], data[10]]);
-        let tag_id_for_normal_access = (u16::from_be_bytes([data[15], data[16]]), u16::from_be_bytes([data[19], data[20]]));
+        let tag_id = TagId32::decode(&[data[15], data[16], data[19], data[20]])?;
 
         let door_number = data[17];
 
@@ -473,7 +473,7 @@ impl Response<EventLogResponse> for EventLogResponse {
             timestamp,
             port_number,
             user_address_or_tag_id,
-            tag_id_for_normal_access,
+            tag_id,
             door_number,
             sor_deduction_amount,
             sor_balance,

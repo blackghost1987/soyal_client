@@ -2,7 +2,7 @@ use crate::common::*;
 use crate::structs::*;
 
 use std::fmt::Debug;
-use std::convert;
+use std::{convert, fmt};
 
 use serde::{Serialize, Deserialize};
 
@@ -305,4 +305,27 @@ pub enum RelayCommand {
     AlarmRelayOn      = 0x85,
     AlarmRelayOff     = 0x86,
     AlarmRelayPulse   = 0x87,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum TagId {
+    TagId32(TagId32),
+    TagId64(TagId64),
+}
+
+impl fmt::Display for TagId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TagId::TagId32(t) => write!(f, "{}", t),
+            TagId::TagId64(t) => write!(f, "{}", t),
+        }
+    }
+}
+
+impl convert::From<TagId32> for TagId {
+    fn from(t: TagId32) -> TagId { TagId::TagId32(t) }
+}
+
+impl convert::From<TagId64> for TagId {
+    fn from(t: TagId64) -> TagId { TagId::TagId64(t) }
 }

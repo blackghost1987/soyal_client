@@ -9,6 +9,7 @@ use serde::{Serialize, Deserialize};
 use chrono::{NaiveDate, Datelike, DateTime, Local, TimeZone};
 use macaddr::MacAddr6;
 use enum_primitive::FromPrimitive;
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StatusData {
@@ -685,7 +686,7 @@ impl UserAccessTimeZone {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserParameters {
-    pub tag_uid: (u16, u16, u16, u16),
+    pub tag_id: TagId64,
     pub pin_code: u32,
     pub mode: UserMode,
     pub zone: UserAccessTimeZone,
@@ -701,14 +702,9 @@ impl UserParameters {
             return Err(ProtocolError::NotEnoughData.into());
         }
 
-        let tag_uid = (
-            u16::from_be_bytes([data[0], data[1]]),
-            u16::from_be_bytes([data[2], data[3]]),
-            u16::from_be_bytes([data[4], data[5]]),
-            u16::from_be_bytes([data[6], data[7]])
-        );
+        let tag_id = TagId64::decode(&data[0..8])?;
 
-        if tag_uid == (0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF) {
+        if tag_id == TagId64::USER_NOT_FOUND {
             return Err(ProtocolError::UserNotFound.into());
         }
 
@@ -726,7 +722,7 @@ impl UserParameters {
         let enable_anti_pass_back_check = data[20] & 0b1000000 != 0;
 
         Ok(UserParameters {
-            tag_uid,
+            tag_id,
             pin_code,
             mode,
             zone,
@@ -740,10 +736,7 @@ impl UserParameters {
     pub fn encode(&self) -> Vec<u8> {
         let mut data = Vec::<u8>::new();
 
-        data.extend_from_slice(&self.tag_uid.0.to_be_bytes());
-        data.extend_from_slice(&self.tag_uid.1.to_be_bytes());
-        data.extend_from_slice(&self.tag_uid.2.to_be_bytes());
-        data.extend_from_slice(&self.tag_uid.3.to_be_bytes());
+        data.extend_from_slice(&self.tag_id.encode());
 
         data.extend_from_slice(&self.pin_code.to_be_bytes());
         data.push(self.mode.encode());
@@ -899,6 +892,84 @@ impl ClockData {
             firmware_identify_code,
             controller_type,
         })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct TagId32 {
+    pub first:  u16,
+    pub second: u16,
+}
+
+impl TagId32 {
+    pub fn new(first: u16, second: u16) -> TagId32 {
+        TagId32 { first, second }
+    }
+
+    pub fn decode(data: &[u8]) -> Result<TagId32> {
+        if data.len() < 4 {
+            return Err(ProtocolError::MessageTooShort.into());
+        }
+
+        Ok(TagId32 {
+            first:  u16::from_be_bytes([data[0], data[1]]),
+            second: u16::from_be_bytes([data[2], data[3]]),
+        })
+    }
+}
+
+impl fmt::Display for TagId32 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}:{}", self.first, self.second)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct TagId64 {
+    pub first:  u16,
+    pub second: u16,
+    pub third:  u16,
+    pub fourth: u16,
+}
+
+impl TagId64 {
+    pub const USER_NOT_FOUND: TagId64 = TagId64 {
+        first:  0xFFFF,
+        second: 0xFFFF,
+        third:  0xFFFF,
+        fourth: 0xFFFF,
+    };
+
+    pub fn new(first: u16, second: u16, third: u16, fourth: u16) -> TagId64 {
+        TagId64 { first, second, third, fourth }
+    }
+
+    pub fn decode(data: &[u8]) -> Result<TagId64> {
+        if data.len() < 8 {
+            return Err(ProtocolError::MessageTooShort.into());
+        }
+
+        Ok(TagId64 {
+            first:  u16::from_be_bytes([data[0], data[1]]),
+            second: u16::from_be_bytes([data[2], data[3]]),
+            third:  u16::from_be_bytes([data[4], data[5]]),
+            fourth: u16::from_be_bytes([data[6], data[7]]),
+        })
+    }
+
+    pub fn encode(&self) -> Vec<u8> {
+        let mut res = Vec::<u8>::new();
+        res.extend_from_slice(&self.first.to_be_bytes());
+        res.extend_from_slice(&self.second.to_be_bytes());
+        res.extend_from_slice(&self.third.to_be_bytes());
+        res.extend_from_slice(&self.fourth.to_be_bytes());
+        res
+    }
+}
+
+impl fmt::Display for TagId64 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}:{}:{}:{}", self.first, self.second, self.third, self.fourth)
     }
 }
 
