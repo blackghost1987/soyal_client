@@ -81,7 +81,7 @@ impl<'a> ExtendedMessage<'a> {
         buffer.extend_from_slice(&length.to_be_bytes());
         buffer.push(self.destination_id);
         buffer.push(command_code);
-        buffer.extend_from_slice(&self.data);
+        buffer.extend_from_slice(self.data);
 
         let mut xor_res: u8 = 0xFF;
         xor_res.bitxor_assign(self.destination_id);

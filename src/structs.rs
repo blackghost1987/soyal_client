@@ -327,15 +327,16 @@ impl ControllerOptions {
     }
 
     pub fn encode(&self, version: Version) -> Result<Vec<u8>> {
-        let mut data = Vec::<u8>::new();
-        data.push(self.main_port_door_number);
-        data.push(self.wiegand_port_door_number);
+        let mut data = vec![
+            self.main_port_door_number,
+            self.wiegand_port_door_number
+        ];
         data.extend_from_slice(&self.edit_password.to_be_bytes());
         data.extend_from_slice(&self.master_user_range_start.to_be_bytes());
         data.extend_from_slice(&self.master_user_range_end.to_be_bytes());
         data.extend_from_slice(&self.general_password.to_be_bytes());
         data.extend_from_slice(&self.duress_code.to_be_bytes());
-        data.extend_from_slice(&vec![0x00, 0x00]); // reserved
+        data.extend_from_slice(&[0x00, 0x00]); // reserved
         data.extend_from_slice(&self.connected_reader_bitmask.to_be_bytes()); // doc error, bytes22-23 duplicated? must be zero?
         data.extend_from_slice(&self.tag_hold_time.to_be_bytes());
         data.extend_from_slice(&self.main_port_door_relay_time.to_be_bytes());
@@ -459,14 +460,10 @@ impl ExtendedControllerOptions {
         if self.door_relay_active_in_auto_open_time_zone { data += 0b10000000; }
         if self.stop_alarm_at_door_closed                { data += 0b01000000; }
         if self.free_tag_access_mode                     { data += 0b00100000; }
-        if !main_port {
-            if self.use_main_door_relay_for_wiegand_port { data += 0b00010000; }
-        }
+        if !main_port && self.use_main_door_relay_for_wiegand_port { data += 0b00010000; }
         if self.auto_disarmed_time_zone                  { data += 0b00001000; }
         if self.key_pad_inhibited                        { data += 0b00000100; }
-        if main_port {
-            if self.fingerprint_only_enabled             { data += 0b00000010; }
-        }
+        if main_port && self.fingerprint_only_enabled    { data += 0b00000010; }
         if self.egress_button_sound                      { data += 0b00000001; }
         data
     }
@@ -485,10 +482,10 @@ impl DIPortStatus {
     pub fn decode(data: u8) -> DIPortStatus {
         // Note: Active == 0 !!!
         DIPortStatus {
-            main_egress_active:          data & 0b00000001 != 1,
-            main_door_sensor_active:     data & 0b00000010 != 1,
-            wiegand_egress_active:       data & 0b00000100 != 1,
-            wiegand_door_sensor_active:  data & 0b00001000 != 1,
+            main_egress_active:          data & 0b00000001 == 0,
+            main_door_sensor_active:     data & 0b00000010 == 0,
+            wiegand_egress_active:       data & 0b00000100 == 0,
+            wiegand_door_sensor_active:  data & 0b00001000 == 0,
         }
     }
 }
@@ -504,9 +501,9 @@ impl RelayPortStatus {
     pub fn decode(data: u8) -> RelayPortStatus {
         // Note: Active == 0 !!!
         RelayPortStatus {
-            main_door_relay_active:    data & 0b00000001 != 1,
-            wiegand_door_relay_active: data & 0b00010000 != 1,
-            alarm_relay_active:        data & 0b10000000 != 1,
+            main_door_relay_active:    data & 0b00000001 == 0,
+            wiegand_door_relay_active: data & 0b00010000 == 0,
+            alarm_relay_active:        data & 0b10000000 == 0,
         }
     }
 }
@@ -854,7 +851,7 @@ impl IpAndMacAddress {
         let dns_primary:  u32 = self.dns_primary.into();
         let dns_secondary: u32 = self.dns_secondary.into();
 
-        data.extend_from_slice(&self.mac_address.as_bytes());
+        data.extend_from_slice(self.mac_address.as_bytes());
         data.extend_from_slice(&ip_addr.to_be_bytes());
         data.extend_from_slice(&subnet_mask.to_be_bytes());
         data.extend_from_slice(&gateway_addr.to_be_bytes());

@@ -45,7 +45,7 @@ impl SoyalClient {
 
     fn send(&self, command: Command, data: &[u8]) -> io::Result<Vec<u8>> {
         if self.debug_log {
-            println!("Sending command {:?} (with data {:?}) to {:?}", command, data, self.access_data);
+            println!("Sending command {:?} (with data {:?}) to {:?}", command, data, self.access_data.ip);
         }
 
         let address = SocketAddr::new(self.access_data.ip.into(), self.access_data.port);
@@ -110,10 +110,12 @@ impl SoyalClient {
 
     //*** CONTROLLER PARAMETER SETTERS
 
-    pub fn set_controller_params(&self, sub_code: ControllerParamSubCommand, data: &Vec<u8>) -> Result<AckOrNack> {
-        let mut bytes = Vec::<u8>::new();
-        bytes.push(sub_code as u8);
-        bytes.extend_from_slice(&data);
+    pub fn set_controller_params(&self, sub_code: ControllerParamSubCommand, data: &[u8]) -> Result<AckOrNack> {
+        let mut bytes = vec![sub_code as u8];
+        bytes.extend_from_slice(data);
+        if self.debug_log {
+            println!("Sending SetControllerParams with sub-command {:?} to {:?}", sub_code, self.access_data.ip);
+        }
         let raw = self.send(Command::SetControllerParams, &bytes)?;
         AckOrNack::handle(raw)
     }
@@ -215,25 +217,23 @@ impl SoyalClient {
     }
 
     pub fn relay_control(&self, command: RelayCommand, port: PortNumber) -> Result<RelayStatusResponse> {
-        let mut data = Vec::<u8>::new();
-        data.push(command as u8);
-
         let port = (port as u8) - (PortNumber::MainPort as u8);
-        data.push(port);
+        let data = vec![command as u8, port];
 
         let raw = self.send(Command::RelayOnOffControl, &data)?;
         RelayStatusResponse::decode(&raw)
     }
 
     pub fn set_real_time_clock(&self, time: DateTime<Local>) -> Result<AckOrNack> {
-        let mut data = Vec::<u8>::new();
-        data.push(time.second() as u8);
-        data.push(time.minute() as u8);
-        data.push(time.hour() as u8);
-        data.push(time.weekday().number_from_sunday() as u8);
-        data.push(time.day() as u8);
-        data.push(time.month() as u8);
-        data.push((time.year() - 2000) as u8);
+        let data = vec![
+            time.second() as u8,
+            time.minute() as u8,
+            time.hour() as u8,
+            time.weekday().number_from_sunday() as u8,
+            time.day() as u8,
+            time.month() as u8,
+            (time.year() - 2000) as u8,
+        ];
 
         let raw = self.send(Command::SetRealTimeClock, &data)?;
         AckOrNack::handle(raw)

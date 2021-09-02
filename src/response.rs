@@ -18,9 +18,9 @@ pub struct EchoResponse<'a> {
 }
 
 pub trait Response<T> {
-    fn decode(raw: &Vec<u8>) -> Result<T>;
+    fn decode(raw: &[u8]) -> Result<T>;
 
-    fn get_message_part(raw: &Vec<u8>) -> Result<&[u8]> {
+    fn get_message_part(raw: &[u8]) -> Result<&[u8]> {
         let non_header = match raw[0]  {
             0x7E => Ok(&raw[1..]),
             0xFF => match raw[0..4] == EXTENDED_HEADER {
@@ -72,7 +72,7 @@ pub trait Response<T> {
         Ok(&raw_msg[0..msg_length-2])
     }
 
-    fn get_data_parts(raw: &Vec<u8>, expected_command: Option<EchoCode>) -> Result<EchoResponse> {
+    fn get_data_parts(raw: &[u8], expected_command: Option<EchoCode>) -> Result<EchoResponse> {
         let msg = Self::get_message_part(raw)?;
         let destination_id = msg[0];
         let command: EchoCode = EchoCode::from_u8(msg[1]).ok_or(ProtocolError::UnknownCommandCode)?;
@@ -98,7 +98,7 @@ pub struct ControllerStatusResponse {
 }
 
 impl Response<ControllerStatusResponse> for ControllerStatusResponse {
-    fn decode(raw: &Vec<u8>) -> Result<ControllerStatusResponse> {
+    fn decode(raw: &[u8]) -> Result<ControllerStatusResponse> {
         let msg = Self::get_message_part(raw)?;
 
         if msg.len() < 5 {
@@ -131,7 +131,7 @@ pub struct SerialNumberResponse {
 }
 
 impl Response<SerialNumberResponse> for SerialNumberResponse {
-    fn decode(raw: &Vec<u8>) -> Result<SerialNumberResponse> {
+    fn decode(raw: &[u8]) -> Result<SerialNumberResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
@@ -163,7 +163,7 @@ pub struct RelayDelayResponse {
 }
 
 impl Response<RelayDelayResponse> for RelayDelayResponse {
-    fn decode(raw: &Vec<u8>) -> Result<RelayDelayResponse> {
+    fn decode(raw: &[u8]) -> Result<RelayDelayResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
@@ -198,7 +198,7 @@ pub struct EditPasswordResponse {
 }
 
 impl Response<EditPasswordResponse> for EditPasswordResponse {
-    fn decode(raw: &Vec<u8>) -> Result<EditPasswordResponse> {
+    fn decode(raw: &[u8]) -> Result<EditPasswordResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
@@ -228,7 +228,7 @@ pub struct ControllerOptionsResponse {
 }
 
 impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
-    fn decode(raw: &Vec<u8>) -> Result<ControllerOptionsResponse> {
+    fn decode(raw: &[u8]) -> Result<ControllerOptionsResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
@@ -238,7 +238,7 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
 
         let source = data[0];
         let controller_type = ControllerType::from_u8(data[1]).ok_or(ProtocolError::UnknownControllerType)?;
-        let controller_options = ControllerOptions::decode(&data, Version::new(4, 3, 0))?;
+        let controller_options = ControllerOptions::decode(data, Version::new(4, 3, 0))?;
 
         Ok(ControllerOptionsResponse {
             destination_id: parts.destination_id,
@@ -260,7 +260,7 @@ pub struct IpAndMacAddressResponse {
 }
 
 impl Response<IpAndMacAddressResponse> for IpAndMacAddressResponse {
-    fn decode(raw: &Vec<u8>) -> Result<IpAndMacAddressResponse> {
+    fn decode(raw: &[u8]) -> Result<IpAndMacAddressResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
@@ -292,7 +292,7 @@ pub struct RemoteTCPServerParamsResponse {
 }
 
 impl Response<RemoteTCPServerParamsResponse> for RemoteTCPServerParamsResponse {
-    fn decode(raw: &Vec<u8>) -> Result<RemoteTCPServerParamsResponse> {
+    fn decode(raw: &[u8]) -> Result<RemoteTCPServerParamsResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
@@ -322,7 +322,7 @@ pub struct EventLogStatusResponse {
 }
 
 impl Response<EventLogStatusResponse> for EventLogStatusResponse {
-    fn decode(raw: &Vec<u8>) -> Result<EventLogStatusResponse> {
+    fn decode(raw: &[u8]) -> Result<EventLogStatusResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
@@ -348,11 +348,11 @@ pub struct AckResponse {
 }
 
 impl Response<AckResponse> for AckResponse {
-    fn decode(raw: &Vec<u8>) -> Result<AckResponse> {
+    fn decode(raw: &[u8]) -> Result<AckResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::CommandAcknowledged))?;
         let data = parts.data;
 
-        if data.len() < 1 {
+        if data.is_empty() {
             return Err(ProtocolError::MessageTooShort.into())
         }
 
@@ -373,11 +373,11 @@ pub struct NackResponse {
 }
 
 impl Response<NackResponse> for NackResponse {
-    fn decode(raw: &Vec<u8>) -> Result<NackResponse> {
+    fn decode(raw: &[u8]) -> Result<NackResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::CommandUnacknowledged))?;
         let data = parts.data;
 
-        if data.len() < 1 {
+        if data.is_empty() {
             return Err(ProtocolError::MessageTooShort.into())
         }
 
@@ -431,7 +431,7 @@ pub struct EventLogResponse {
 }
 
 impl Response<EventLogResponse> for EventLogResponse {
-    fn decode(raw: &Vec<u8>) -> Result<EventLogResponse> {
+    fn decode(raw: &[u8]) -> Result<EventLogResponse> {
         let msg = Self::get_message_part(raw)?;
 
         let destination_id = msg[0];
@@ -491,7 +491,7 @@ pub struct UserParametersResponse {
 }
 
 impl Response<UserParametersResponse> for UserParametersResponse {
-    fn decode(raw: &Vec<u8>) -> Result<UserParametersResponse> {
+    fn decode(raw: &[u8]) -> Result<UserParametersResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
@@ -528,7 +528,7 @@ pub struct RelayStatusResponse {
 }
 
 impl Response<RelayStatusResponse> for RelayStatusResponse {
-    fn decode(raw: &Vec<u8>) -> Result<RelayStatusResponse> {
+    fn decode(raw: &[u8]) -> Result<RelayStatusResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
@@ -574,7 +574,7 @@ pub struct RealTimeClockResponse {
 }
 
 impl Response<RealTimeClockResponse> for RealTimeClockResponse {
-    fn decode(raw: &Vec<u8>) -> Result<RealTimeClockResponse> {
+    fn decode(raw: &[u8]) -> Result<RealTimeClockResponse> {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
