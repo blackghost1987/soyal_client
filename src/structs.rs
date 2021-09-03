@@ -916,6 +916,19 @@ impl TagId32 {
             second: u16::from_be_bytes([data[2], data[3]]),
         })
     }
+
+    pub fn encode(&self) -> Vec<u8> {
+        let mut res = Vec::<u8>::new();
+        res.extend_from_slice(&self.first.to_be_bytes());
+        res.extend_from_slice(&self.second.to_be_bytes());
+        res
+    }
+}
+
+impl From<TagId32> for u32 {
+    fn from(t: TagId32) -> u32 {
+        ((t.first as u32) << 16) + (t.second as u32)
+    }
 }
 
 impl fmt::Display for TagId32 {
@@ -964,6 +977,15 @@ impl TagId64 {
         res.extend_from_slice(&self.third.to_be_bytes());
         res.extend_from_slice(&self.fourth.to_be_bytes());
         res
+    }
+}
+
+impl From<TagId64> for u64 {
+    fn from(t: TagId64) -> u64 {
+        ((t.first as u64) << 48) +
+        ((t.second as u64) << 32) +
+        ((t.third as u64) << 16) +
+        (t.fourth as u64)
     }
 }
 
