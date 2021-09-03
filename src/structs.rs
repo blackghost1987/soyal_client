@@ -923,17 +923,24 @@ impl TagId32 {
         res.extend_from_slice(&self.second.to_be_bytes());
         res
     }
+
+    pub fn numeric_format(&self) -> u32 {
+        ((self.first as u32) << 16) + (self.second as u32)
+    }
+
+    pub fn hex_format(&self) -> String {
+        let numeric: u32 = self.numeric_format();
+        format!("{:08X}", numeric)
+    }
 }
 
 impl From<TagId32> for u32 {
-    fn from(t: TagId32) -> u32 {
-        ((t.first as u32) << 16) + (t.second as u32)
-    }
+    fn from(t: TagId32) -> u32 { t.numeric_format() }
 }
 
 impl fmt::Display for TagId32 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}", self.first, self.second)
+        write!(f, "{:05}:{:05}", self.first, self.second)
     }
 }
 
@@ -991,7 +998,7 @@ impl From<TagId64> for u64 {
 
 impl fmt::Display for TagId64 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}:{}:{}", self.first, self.second, self.third, self.fourth)
+        write!(f, "{:05}:{:05}:{:05}:{:05}", self.first, self.second, self.third, self.fourth)
     }
 }
 
