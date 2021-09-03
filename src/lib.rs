@@ -216,10 +216,8 @@ impl SoyalClient {
         AckOrNack::handle(raw)
     }
 
-    pub fn relay_control(&self, command: RelayCommand, port: PortNumber) -> Result<RelayStatusResponse> {
-        let port = (port as u8) - (PortNumber::MainPort as u8);
-        let data = vec![command as u8, port];
-
+    pub fn relay_control(&self, command: RelayCommand, port: RelayPortNumber) -> Result<RelayStatusResponse> {
+        let data = vec![command as u8, port as u8];
         let raw = self.send(Command::RelayOnOffControl, &data)?;
         RelayStatusResponse::decode(&raw)
     }

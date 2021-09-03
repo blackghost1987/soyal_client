@@ -281,7 +281,7 @@ fn test_set_user_params() {
 #[ignore]
 fn test_get_relay_control() {
     let client = create_client();
-    let res = client.relay_control(RelayCommand::GetCurrentStatus, PortNumber::AllPorts);
+    let res = client.relay_control(RelayCommand::GetCurrentStatus, RelayPortNumber::AllPorts);
     println!("Relay status: {:?}", res);
     assert!(res.is_ok());
 }
@@ -290,7 +290,7 @@ fn test_get_relay_control() {
 #[ignore]
 fn test_set_relay_control() {
     let client = create_client();
-    let res = client.relay_control(RelayCommand::DoorRelayPulse, PortNumber::AllPorts);
+    let res = client.relay_control(RelayCommand::DoorRelayPulse, RelayPortNumber::AllPorts);
     println!("Relay status after enable: {:?}", res);
     assert!(res.is_ok());
 }

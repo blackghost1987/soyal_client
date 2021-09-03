@@ -417,7 +417,7 @@ pub struct EventLogResponse {
     pub function_code: EventFunctionCode,
     pub source: u8,
     pub timestamp: DateTime<Local>,
-    pub port_number: PortNumber,
+    pub port_number: EventPortNumber,
     pub user_address_or_tag_id: u16, // Normal Access: User ID Other: last 2 bytes of the Card UID // TODO make this an enum?
     pub tag_id: TagId32,
     // Sub Code
@@ -452,7 +452,7 @@ impl Response<EventLogResponse> for EventLogResponse {
         let second = data[1] as u32;
         let timestamp = Local.ymd(year, month, day).and_hms(hour, minute, second);
 
-        let port_number = PortNumber::from_u8(data[8]).ok_or(ProtocolError::UnknownPortNumber)?;
+        let port_number = EventPortNumber::from_u8(data[8]).ok_or(ProtocolError::UnknownPortNumber)?;
 
         let user_address_or_tag_id = u16::from_be_bytes([data[9], data[10]]);
         let tag_id = TagId32::decode(&[data[15], data[16], data[19], data[20]])?;

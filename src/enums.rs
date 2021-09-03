@@ -286,10 +286,19 @@ pub enum EventFunctionCode {
 
 enum_from_primitive! {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum PortNumber {
+pub enum EventPortNumber {
     MainPort     = 17,
     WiegandPort1 = 18,
     WiegandPort2 = 19,
+}
+}
+
+enum_from_primitive! {
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum RelayPortNumber {
+    MainPort     = 0x00,
+    WiegandPort1 = 0x01,
+    WiegandPort2 = 0x02,
     AllPorts     = 0xFF,
 }
 }
