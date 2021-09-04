@@ -13,15 +13,15 @@ use crate::structs::*;
 use crate::request::*;
 use crate::response::*;
 
-use std::io::prelude::*;
-use std::net::{Ipv4Addr, TcpStream, SocketAddr};
+use chrono::{DateTime, Local, Timelike, Datelike};
+use either::Either;
+use log::*;
+use semver::Version;
 use serde::Serialize;
 use std::io;
-use either::Either;
-use semver::Version;
-use chrono::{DateTime, Local, Timelike, Datelike};
+use std::io::prelude::*;
+use std::net::{Ipv4Addr, TcpStream, SocketAddr};
 use std::time::Duration;
-
 
 #[derive(Clone, Debug, Serialize)]
 pub struct AccessData {
@@ -32,22 +32,17 @@ pub struct AccessData {
 
 pub struct SoyalClient {
     access_data: AccessData,
-    debug_log: bool, // TODO get rid of this, use trace level logging
 }
 
 impl SoyalClient {
-    pub fn new(access_data: AccessData, debug_log: Option<bool>) -> SoyalClient {
+    pub fn new(access_data: AccessData) -> SoyalClient {
         SoyalClient {
             access_data,
-            debug_log: debug_log.unwrap_or(false),
         }
     }
 
     fn send(&self, command: Command, data: &[u8]) -> io::Result<Vec<u8>> {
-        if self.debug_log {
-            println!("Sending command {:?} (with data {:?}) to {:?}", command, data, self.access_data.ip);
-        }
-
+        debug!("Sending command {:?} (with data {:?}) to {:?}", command, data, self.access_data.ip);
         let address = SocketAddr::new(self.access_data.ip.into(), self.access_data.port);
 
         let mut stream = TcpStream::connect_timeout(&address, Duration::from_secs(5))?;
@@ -63,9 +58,7 @@ impl SoyalClient {
         stream.set_read_timeout(Some(Duration::from_secs(5)))?;
         let size = stream.read(&mut buffer)?;
 
-        if self.debug_log {
-            println!("Received {} bytes: {:?}", size, &buffer[0..size]);
-        }
+        trace!("Received {} bytes: {:?}", size, &buffer[0..size]);
 
         io::Result::Ok(buffer[0..size].to_vec())
     }
@@ -113,9 +106,7 @@ impl SoyalClient {
     pub fn set_controller_params(&self, sub_code: ControllerParamSubCommand, data: &[u8]) -> Result<AckOrNack> {
         let mut bytes = vec![sub_code as u8];
         bytes.extend_from_slice(data);
-        if self.debug_log {
-            println!("Sending SetControllerParams with sub-command {:?} to {:?}", sub_code, self.access_data.ip);
-        }
+        debug!("Sending SetControllerParams with sub-command {:?} to {:?}", sub_code, self.access_data.ip);
         let raw = self.send(Command::SetControllerParams, &bytes)?;
         AckOrNack::handle(raw)
     }

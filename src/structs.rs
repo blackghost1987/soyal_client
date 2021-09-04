@@ -744,7 +744,6 @@ impl UserParameters {
         data.extend_from_slice(&self.available_doors_bitmap.to_be_bytes());
 
         let year = self.last_allowed_date.year() - 2000;
-        println!("year: {:?}", year);
         assert!(year >= 0, "year minimum is 2000");
         assert!(year <= 255, "year maximum is 2255");
         data.push(year as u8);

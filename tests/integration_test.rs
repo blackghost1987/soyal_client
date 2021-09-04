@@ -15,7 +15,7 @@ fn create_client() -> SoyalClient {
         port: 1621,
         destination_id: 1,
     };
-    SoyalClient::new(access_data, Some(true))
+    SoyalClient::new(access_data)
 }
 
 #[test]

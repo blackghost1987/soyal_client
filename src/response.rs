@@ -3,12 +3,12 @@ use crate::enums::*;
 use crate::structs::*;
 
 use chrono::{DateTime, Local, TimeZone};
+use either::Either;
 use enum_primitive::FromPrimitive;
+use log::*;
+use semver::Version;
 use serde::{Serialize, Deserialize};
 use std::ops::BitXorAssign;
-use either::Either;
-use semver::Version;
-
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EchoResponse<'a> {
@@ -33,7 +33,7 @@ pub trait Response<T> {
         let expected_msg_length = u16::from_be_bytes([non_header[0], non_header[1]]) as usize;
         let msg_length = non_header.len() - 2;
         if expected_msg_length != msg_length {
-            eprintln!("Message length mismatch, expected: {} but got: {}", expected_msg_length, msg_length);
+            error!("Message length mismatch, expected: {} but got: {}", expected_msg_length, msg_length);
             return Err(ProtocolError::MessageLengthMismatch.into());
         };
 
@@ -44,14 +44,14 @@ pub trait Response<T> {
         let sum = raw_msg.get(msg_length-1).expect("Missing sum value");
         let xor = raw_msg.get(msg_length-2).expect("Missing xor value");
 
-        //println!("Received XOR: {:#X?}, SUM {:#X?}", xor, sum);
+        //trace!("Received XOR: {:#X?}, SUM {:#X?}", xor, sum);
 
         let mut xor_res: u8 = 0xFF;
         for d in &raw_msg[..msg_length-2] {
             xor_res.bitxor_assign(d);
         }
 
-        //println!("Calculated XOR: {:#X?}", xor_res);
+        //trace!("Calculated XOR: {:#X?}", xor_res);
 
         if xor_res != *xor {
             return Err(ProtocolError::BadXorValue.into());
@@ -62,7 +62,7 @@ pub trait Response<T> {
             sum_res = sum_res.wrapping_add(*d);
         }
 
-        //println!("Calculated SUM: {:#X?}", sum_res);
+        //trace!("Calculated SUM: {:#X?}", sum_res);
 
         if sum_res != *sum {
             return Err(ProtocolError::BadChecksumValue.into());
@@ -495,7 +495,7 @@ impl Response<UserParametersResponse> for UserParametersResponse {
         let parts = Self::get_data_parts(raw, Some(EchoCode::RequestedData))?;
         let data = parts.data;
 
-        //println!("User data: {:?}, len: {}", data, data.len());
+        //trace!("User data: {:?}, len: {}", data, data.len());
 
         if data.len() < 25 {
             return Err(ProtocolError::MessageTooShort.into())
