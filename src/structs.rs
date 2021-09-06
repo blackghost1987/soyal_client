@@ -695,6 +695,32 @@ pub struct UserParameters {
     pub enable_anti_pass_back_check: bool,
 }
 
+impl Default for UserParameters {
+    fn default() -> Self { 
+        UserParameters {
+            tag_id: TagId64::USER_NOT_FOUND,
+            pin_code: 0,
+            mode: UserMode {
+                access_mode: UserAccessMode::Invalid,
+                patrol_card: false,
+                card_omitted_after_fingerprint_rec: false,
+                fingerprint_omitted_after_card_rec: false,
+                expire_check: false,
+                anti_pass_back_control: false,
+                password_change_available: false,
+            },
+            zone: UserAccessTimeZone {
+                wiegand_port_same_time_zone: true,
+                user_time_zone: 0,
+            },
+            available_doors_bitmap: u16::MAX,
+            last_allowed_date: NaiveDate::from_ymd(2099, 12, 31),
+            level: 0,
+            enable_anti_pass_back_check: false
+        }
+    }
+}
+
 impl UserParameters {
     pub fn decode(data: &[u8]) -> Result<UserParameters> {
         if data.len() < 24 {

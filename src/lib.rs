@@ -50,6 +50,7 @@ impl SoyalClient {
 
     fn get_stream(&mut self) -> io::Result<&TcpStream> {
         if self.stream.is_none() {
+            warn!("Reconnecting to reader...");
             let address = SocketAddr::new(self.access_data.ip.into(), self.access_data.port);
             let new_stream = TcpStream::connect_timeout(&address, SoyalClient::TIMEOUT)?;
             self.stream = Some(new_stream);
@@ -70,7 +71,7 @@ impl SoyalClient {
         let res = stream.write_all(&message.encode());
 
         if let Err(e) = res {
-            debug!("Connection closed! Reason: {:?}", e);
+            warn!("Connection closed! Reason: {:?}", e);
             self.stream = None;
         }
 
@@ -247,6 +248,10 @@ impl SoyalClient {
         data.extend_from_slice(&user_data);
         let raw = self.send_and_read_response(Command::SetUserParamsWithAntiPassBack, &data)?;
         AckOrNack::handle(raw)
+    }
+
+    pub fn clear_user_parameters(&mut self, user_address: u16) -> Result<AckOrNack> {
+        self.set_user_parameters(user_address, UserParameters::default())
     }
 
     pub fn relay_control(&mut self, command: RelayCommand, port: RelayPortNumber) -> Result<RelayStatusResponse> {
