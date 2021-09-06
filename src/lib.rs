@@ -254,6 +254,14 @@ impl SoyalClient {
         self.set_user_parameters(user_address, UserParameters::default())
     }
 
+    pub fn erase_user_data(&mut self, from: u16, to: u16) -> Result<AckOrNack> {
+        let mut data: Vec<u8> = vec![];
+        data.extend_from_slice(&from.to_be_bytes());
+        data.extend_from_slice(&to.to_be_bytes());
+        let raw = self.send_and_read_response(Command::EraseUserData, &data)?;
+        AckOrNack::handle(raw)
+    }
+
     pub fn relay_control(&mut self, command: RelayCommand, port: RelayPortNumber) -> Result<RelayStatusResponse> {
         let data = vec![command as u8, port as u8];
         let raw = self.send_and_read_response(Command::RelayOnOffControl, &data)?;
