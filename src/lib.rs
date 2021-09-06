@@ -130,9 +130,9 @@ impl SoyalClient {
 
     //*** GENERIC GETTERS
 
-    pub fn get_reader_status(&self) -> Result<ControllerStatusResponse> {
+    pub fn poll_reader(&self) -> Result<PollResponse> {
         let raw = self.send(Command::HostingPolling, &[])?;
-        ControllerStatusResponse::decode(&raw)
+        PollResponse::decode(&raw)
     }
 
     fn get_event_log_inner(&self, data: &[u8]) -> Result<Either<AckResponse, EventLogResponse>> {

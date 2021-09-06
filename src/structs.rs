@@ -564,9 +564,8 @@ impl AllKeysPressedData {
 pub struct NewCardPresentData {
     //time_and_attendance: TimeAndAttendance, // TODO implement
     //exit_input: ExitInput, // TODO implement
-    pub site_code: u16,
+    pub card_id: TagId32,
     pub input_value: u16, // if there was no input before flashing card this shows the previous value
-    pub card_code: u16,
     pub id_em4001: u8,
     pub device_params: ControllerPortOptions,
     pub from_wiegand: bool,
@@ -581,6 +580,7 @@ impl NewCardPresentData {
         let site_code    = u16::from_be_bytes([data[1], data[2]]);
         let input_value  = u16::from_be_bytes([data[3], data[4]]);
         let card_code    = u16::from_be_bytes([data[5], data[6]]);
+        let card_id     = TagId32::new(site_code, card_code);
         let id_em4001    = data[7];
 
         let device_params = ControllerPortOptions::decode(data[8]);
@@ -589,9 +589,8 @@ impl NewCardPresentData {
         let setting_forced_open_alarm = data[9] & 0b0100000 != 0;
 
         Ok(NewCardPresentData {
-            site_code,
+            card_id,
             input_value,
-            card_code,
             id_em4001,
             device_params,
             from_wiegand,
@@ -896,13 +895,13 @@ impl ClockData {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct TagId32 {
-    pub first:  u16,
-    pub second: u16,
+    pub site_code:  u16,
+    pub card_code: u16,
 }
 
 impl TagId32 {
-    pub fn new(first: u16, second: u16) -> TagId32 {
-        TagId32 { first, second }
+    pub fn new(site_code: u16, card_code: u16) -> TagId32 {
+        TagId32 { site_code, card_code }
     }
 
     pub fn decode(data: &[u8]) -> Result<TagId32> {
@@ -911,20 +910,20 @@ impl TagId32 {
         }
 
         Ok(TagId32 {
-            first:  u16::from_be_bytes([data[0], data[1]]),
-            second: u16::from_be_bytes([data[2], data[3]]),
+            site_code:  u16::from_be_bytes([data[0], data[1]]),
+            card_code: u16::from_be_bytes([data[2], data[3]]),
         })
     }
 
     pub fn encode(&self) -> Vec<u8> {
         let mut res = Vec::<u8>::new();
-        res.extend_from_slice(&self.first.to_be_bytes());
-        res.extend_from_slice(&self.second.to_be_bytes());
+        res.extend_from_slice(&self.site_code.to_be_bytes());
+        res.extend_from_slice(&self.card_code.to_be_bytes());
         res
     }
 
     pub fn numeric_format(&self) -> u32 {
-        ((self.first as u32) << 16) + (self.second as u32)
+        ((self.site_code as u32) << 16) + (self.card_code as u32)
     }
 
     pub fn hex_format(&self) -> String {
@@ -939,7 +938,7 @@ impl From<TagId32> for u32 {
 
 impl fmt::Display for TagId32 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:05}:{:05}", self.first, self.second)
+        write!(f, "{:05}:{:05}", self.site_code, self.card_code)
     }
 }
 

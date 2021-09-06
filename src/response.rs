@@ -21,6 +21,10 @@ pub trait Response<T> {
     fn decode(raw: &[u8]) -> Result<T>;
 
     fn get_message_part(raw: &[u8]) -> Result<&[u8]> {
+        if raw.is_empty() {
+            return Err(ProtocolError::NoResponse.into())
+        }
+
         let non_header = match raw[0]  {
             0x7E => Ok(&raw[1..]),
             0xFF => match raw[0..4] == EXTENDED_HEADER {
@@ -89,7 +93,7 @@ pub trait Response<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ControllerStatusResponse {
+pub struct PollResponse {
     pub destination_id: u8,
     pub function_code: u8,
     pub source: u8,
@@ -97,8 +101,8 @@ pub struct ControllerStatusResponse {
     pub data: ControllerStatus,
 }
 
-impl Response<ControllerStatusResponse> for ControllerStatusResponse {
-    fn decode(raw: &[u8]) -> Result<ControllerStatusResponse> {
+impl Response<PollResponse> for PollResponse {
+    fn decode(raw: &[u8]) -> Result<PollResponse> {
         let msg = Self::get_message_part(raw)?;
 
         if msg.len() < 5 {
@@ -111,7 +115,7 @@ impl Response<ControllerStatusResponse> for ControllerStatusResponse {
         let event_type     = msg[3];
         let data = ControllerStatus::decode(event_type, &msg[4..])?;
 
-        Ok(ControllerStatusResponse {
+        Ok(PollResponse {
             destination_id,
             function_code,
             source,
@@ -597,7 +601,7 @@ mod tests {
     #[test]
     fn decode_status_io_response() {
         let raw = vec!(255, 0, 90, 165, 0, 10, 0, 9, 1, 0, 1, 0, 16, 0, 230, 1);
-        let d = ControllerStatusResponse::decode(&raw);
+        let d = PollResponse::decode(&raw);
         assert!(d.is_ok());
         if let Ok(echo) = d {
             assert_eq!(echo.destination_id, 0);
@@ -632,7 +636,7 @@ mod tests {
     #[test]
     fn decode_status_all_keys_response() {
         let raw = vec!(255, 0, 90, 165, 0, 21, 0, 9, 1, 1, 139, 4, 210, 0, 16, 1, 0, 5, 0, 3, 4, 0, 1, 11, 0, 178, 71);
-        let d = ControllerStatusResponse::decode(&raw);
+        let d = PollResponse::decode(&raw);
         assert!(d.is_ok());
         if let Ok(echo) = d {
             assert_eq!(echo.destination_id, 0);
@@ -659,7 +663,7 @@ mod tests {
     #[test]
     fn decode_status_new_card_response() {
         let raw = vec!(255, 0, 90, 165, 0, 23, 0, 9, 1, 2, 11, 18, 221, 0, 0, 186, 139, 0, 16, 0, 138, 0, 0, 0, 0, 0, 0, 154, 127);
-        let d = ControllerStatusResponse::decode(&raw);
+        let d = PollResponse::decode(&raw);
         assert!(d.is_ok());
         if let Ok(echo) = d {
             assert_eq!(echo.destination_id, 0);
@@ -667,9 +671,8 @@ mod tests {
             assert_eq!(echo.source, 1);
             assert_eq!(echo.event_type, 2);
             assert_eq!(echo.data, ControllerStatus::NewCardPresent(NewCardPresentData {
-                site_code: 4829,
+                card_id: TagId32::new(4829, 47755),
                 input_value: 0,
-                card_code: 47755,
                 id_em4001: 0,
                 device_params: ControllerPortOptions {
                     anti_pass_back_enabled: false,

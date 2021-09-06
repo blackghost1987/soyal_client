@@ -20,10 +20,10 @@ fn create_client() -> SoyalClient {
 
 #[test]
 #[ignore]
-fn test_get_reader_status() {
+fn test_poll_reader() {
     let client = create_client();
-    let res = client.get_reader_status();
-    println!("Hardware status: {:?}", res);
+    let res = client.poll_reader();
+    println!("Poll status: {:?}", res);
     assert!(res.is_ok())
 }
 
