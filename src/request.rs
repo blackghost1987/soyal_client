@@ -6,6 +6,9 @@ use crate::common::*;
 enum_from_primitive! {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Command {
+    PromptAcceptedMessage            = 0x04,
+    PromptInvalidMessage             = 0x05,
+    PromptKeyingInPassword           = 0x09,
     GetControllerParams              = 0x12,
     HostingPolling                   = 0x18,
     SetControllerParams              = 0x20,

@@ -41,7 +41,7 @@ impl SoyalClient {
         }
     }
 
-    fn send(&self, command: Command, data: &[u8]) -> io::Result<Vec<u8>> {
+    fn send(&self, command: Command, data: &[u8]) -> io::Result<TcpStream> {
         debug!("Sending command {:?} (with data {:?}) to {:?}", command, data, self.access_data.ip);
         let address = SocketAddr::new(self.access_data.ip.into(), self.access_data.port);
 
@@ -54,11 +54,16 @@ impl SoyalClient {
         };
 
         let _ = stream.write(&message.encode())?;
+        Ok(stream)
+    }
+
+    fn send_and_read_response(&self, command: Command, data: &[u8]) -> io::Result<Vec<u8>> {
+        let mut stream = self.send(command, data)?;
         let mut buffer = [0; 128];
         stream.set_read_timeout(Some(Duration::from_secs(5)))?;
         let size = stream.read(&mut buffer)?;
 
-        trace!("Received {} bytes: {:?}", size, &buffer[0..size]);
+        info!("Received {} bytes: {:?}", size, &buffer[0..size]);
 
         io::Result::Ok(buffer[0..size].to_vec())
     }
@@ -66,7 +71,7 @@ impl SoyalClient {
     //*** CONTROLLER PARAMETER GETTERS
 
     fn get_controller_params_inner(&self, sub_code: ControllerParamSubCommand) -> io::Result<Vec<u8>> {
-        self.send(Command::GetControllerParams, &[sub_code as u8])
+        self.send_and_read_response(Command::GetControllerParams, &[sub_code as u8])
     }
 
     pub fn get_controller_params<T>(&self, sub_code: ControllerParamSubCommand) -> Result<T> where T: Response<T> {
@@ -107,7 +112,7 @@ impl SoyalClient {
         let mut bytes = vec![sub_code as u8];
         bytes.extend_from_slice(data);
         debug!("Sending SetControllerParams with sub-command {:?} to {:?}", sub_code, self.access_data.ip);
-        let raw = self.send(Command::SetControllerParams, &bytes)?;
+        let raw = self.send_and_read_response(Command::SetControllerParams, &bytes)?;
         AckOrNack::handle(raw)
     }
 
@@ -131,12 +136,12 @@ impl SoyalClient {
     //*** GENERIC GETTERS
 
     pub fn poll_reader(&self) -> Result<PollResponse> {
-        let raw = self.send(Command::HostingPolling, &[])?;
+        let raw = self.send_and_read_response(Command::HostingPolling, &[])?;
         PollResponse::decode(&raw)
     }
 
     fn get_event_log_inner(&self, data: &[u8]) -> Result<Either<AckResponse, EventLogResponse>> {
-        let raw = self.send(Command::GetOldestEventLog, data)?;
+        let raw = self.send_and_read_response(Command::GetOldestEventLog, data)?;
         match AckResponse::decode(&raw) {
             Ok(x) => Ok(Either::Left(x)),
             Err(_) => {
@@ -165,7 +170,7 @@ impl SoyalClient {
 
     /// Version 2.07 and later
     pub fn get_event_log_status(&self) -> Result<EventLogStatusResponse> {
-        let raw = self.send(Command::GetOldestEventLog, &[0xFF, 0xFF, 0xFF])?;
+        let raw = self.send_and_read_response(Command::GetOldestEventLog, &[0xFF, 0xFF, 0xFF])?;
         EventLogStatusResponse::decode(&raw)
     }
 
@@ -176,24 +181,34 @@ impl SoyalClient {
         let continue_number_of_cards: u8 = 1;
 
         data.push(continue_number_of_cards);
-        let raw = self.send(Command::GetUserParams, &data)?;
+        let raw = self.send_and_read_response(Command::GetUserParams, &data)?;
         UserParametersResponse::decode(&raw)
     }
 
     pub fn get_real_time_clock(&self) -> Result<RealTimeClockResponse> {
-        let raw = self.send(Command::GetRealTimeClock, &[])?;
+        let raw = self.send_and_read_response(Command::GetRealTimeClock, &[])?;
         RealTimeClockResponse::decode(&raw)
     }
 
     //*** GENERIC SETTERS
 
+    pub fn prompt_accepted(&self) -> Result<()> {
+        self.send(Command::PromptAcceptedMessage, &[])?;
+        Ok(())
+    }
+
+    pub fn prompt_invalid(&self) -> Result<()> {
+        self.send(Command::PromptAcceptedMessage, &[])?;
+        Ok(())
+    }
+
     pub fn remove_oldest_event_log(&self) -> Result<AckOrNack> {
-        let raw = self.send(Command::RemoveOldestEventLog, &[])?;
+        let raw = self.send_and_read_response(Command::RemoveOldestEventLog, &[])?;
         AckOrNack::handle(raw)
     }
 
     pub fn empty_event_log(&self) -> Result<AckOrNack> {
-        let raw = self.send(Command::EmptyEventLog, &[])?;
+        let raw = self.send_and_read_response(Command::EmptyEventLog, &[])?;
         AckOrNack::handle(raw)
     }
 
@@ -203,13 +218,13 @@ impl SoyalClient {
 
         let user_data = user_params.encode();
         data.extend_from_slice(&user_data);
-        let raw = self.send(Command::SetUserParamsWithAntiPassBack, &data)?;
+        let raw = self.send_and_read_response(Command::SetUserParamsWithAntiPassBack, &data)?;
         AckOrNack::handle(raw)
     }
 
     pub fn relay_control(&self, command: RelayCommand, port: RelayPortNumber) -> Result<RelayStatusResponse> {
         let data = vec![command as u8, port as u8];
-        let raw = self.send(Command::RelayOnOffControl, &data)?;
+        let raw = self.send_and_read_response(Command::RelayOnOffControl, &data)?;
         RelayStatusResponse::decode(&raw)
     }
 
@@ -224,7 +239,7 @@ impl SoyalClient {
             (time.year() - 2000) as u8,
         ];
 
-        let raw = self.send(Command::SetRealTimeClock, &data)?;
+        let raw = self.send_and_read_response(Command::SetRealTimeClock, &data)?;
         AckOrNack::handle(raw)
     }
 }
