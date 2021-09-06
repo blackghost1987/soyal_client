@@ -1000,6 +1000,42 @@ impl fmt::Display for TagId64 {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct HostingFlags {
+    pub keypad_hosting: bool,
+    pub lcd_screen_hosting: bool,
+    pub inhibit_125khz_tags: bool,
+    pub inhibit_13_56mhz_tags: bool,
+    pub alarm_on_invalid_tag: bool,
+    pub disable_buzzer: bool,
+}
+
+impl HostingFlags {
+    pub fn decode(data: u8) -> HostingFlags {
+        HostingFlags {
+            // RFU:                   data & 0b10000000 != 0,
+            keypad_hosting:           data & 0b01000000 != 0,
+            lcd_screen_hosting:       data & 0b00100000 != 0,
+            inhibit_125khz_tags:      data & 0b00010000 != 0,
+            inhibit_13_56mhz_tags:    data & 0b00001000 != 0,
+            // RFU                    data & 0b00000100 != 0,
+            alarm_on_invalid_tag:     data & 0b00000010 != 0,
+            disable_buzzer:           data & 0b00000001 != 0,
+        }
+    }
+
+    pub fn encode(&self) -> u8 {
+        let mut data = 0b00000000;
+        if self.keypad_hosting           { data += 0b01000000; }
+        if self.lcd_screen_hosting       { data += 0b00100000; }
+        if self.inhibit_125khz_tags      { data += 0b00010000; }
+        if self.inhibit_13_56mhz_tags    { data += 0b00001000; }
+        if self.alarm_on_invalid_tag     { data += 0b00000010; }
+        if self.disable_buzzer           { data += 0b00000001; }
+        data
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -21,7 +21,7 @@ fn create_client() -> SoyalClient {
 #[test]
 #[ignore]
 fn test_poll_reader() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.poll_reader();
     println!("Poll status: {:?}", res);
     assert!(res.is_ok())
@@ -30,7 +30,7 @@ fn test_poll_reader() {
 #[test]
 #[ignore]
 fn test_get_controller_options() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.get_controller_options();
     println!("Controller params: {:?}", res);
     assert!(res.is_ok());
@@ -39,7 +39,7 @@ fn test_get_controller_options() {
 #[test]
 #[ignore]
 fn test_set_controller_options() {
-    let client = create_client();
+    let mut client = create_client();
     let controller_options = ControllerOptions {
         main_port_door_number: 1,
         wiegand_port_door_number: 2,
@@ -121,7 +121,7 @@ fn test_set_controller_options() {
 #[test]
 #[ignore]
 fn test_get_remote_tcp_params() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.get_remote_tcp_server_params();
     println!("TCP params: {:?}", res);
     assert!(res.is_ok());
@@ -130,7 +130,7 @@ fn test_get_remote_tcp_params() {
 #[test]
 #[ignore]
 fn test_set_remote_tcp_params() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.set_remote_tcp_server_params(RemoteTCPServerParams {
         first_remote_address: Ipv4Addr::UNSPECIFIED,
         first_remote_port: 0,
@@ -145,7 +145,7 @@ fn test_set_remote_tcp_params() {
 #[test]
 #[ignore]
 fn test_get_ip_and_mac_address() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.get_ip_and_mac_address();
     println!("IP and MAC: {:?}", res);
     assert!(res.is_ok())
@@ -154,7 +154,7 @@ fn test_get_ip_and_mac_address() {
 #[test]
 #[ignore]
 fn test_set_ip_and_mac_address() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.set_ip_and_mac_address(IpAndMacAddress {
         mac_address: MacAddr6::new(0x00, 0x13, 0x57, 0x04, 0x9D, 0x9E),
         ip_address: Ipv4Addr::new(192, 168, 1, 127),
@@ -172,7 +172,7 @@ fn test_set_ip_and_mac_address() {
 #[test]
 #[ignore]
 fn test_get_relay_delays() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.get_relay_delay_time();
     println!("Hardware delays: {:?}", res);
     assert!(res.is_ok())
@@ -181,7 +181,7 @@ fn test_get_relay_delays() {
 #[test]
 #[ignore]
 fn test_get_edit_pass() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.get_controller_edit_password();
     println!("Hardware password: {:?}", res);
     assert!(res.is_ok())
@@ -190,7 +190,7 @@ fn test_get_edit_pass() {
 #[test]
 #[ignore]
 fn test_get_reader_serial() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.get_reader_serial_number();
     println!("Hardware serial: {:?}", res);
     assert!(res.is_ok())
@@ -199,7 +199,7 @@ fn test_get_reader_serial() {
 #[test]
 #[ignore]
 fn test_event_log_status() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.get_event_log_status();
     println!("Event log status: {:?}", res);
     assert!(res.is_ok());
@@ -208,7 +208,7 @@ fn test_event_log_status() {
 #[test]
 #[ignore]
 fn test_oldest_event_log() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.get_oldest_event_log();
     println!("Oldest event log: {:?}", res);
     assert!(res.is_ok());
@@ -217,7 +217,7 @@ fn test_oldest_event_log() {
 #[test]
 #[ignore]
 fn test_specific_event_log() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.get_specific_event_log(3);
     println!("Specific event log: {:?}", res);
     assert!(res.is_ok());
@@ -226,7 +226,7 @@ fn test_specific_event_log() {
 #[test]
 #[ignore]
 fn test_remove_oldest_event_log() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.remove_oldest_event_log();
     println!("Remove oldest event log response: {:?}", res);
     assert!(res.is_ok());
@@ -235,7 +235,7 @@ fn test_remove_oldest_event_log() {
 #[test]
 #[ignore]
 fn test_empty_event_log() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.empty_event_log();
     println!("Empty event log response: {:?}", res);
     assert!(res.is_ok());
@@ -244,7 +244,7 @@ fn test_empty_event_log() {
 #[test]
 #[ignore]
 fn test_get_user_params() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.get_user_parameters(2);
     println!("User params: {:?}", res);
     assert!(res.is_ok());
@@ -253,7 +253,7 @@ fn test_get_user_params() {
 #[test]
 #[ignore]
 fn test_set_user_params() {
-    let client = create_client();
+    let mut client = create_client();
     let user_params = UserParameters {
         tag_id: TagId64::new(0, 0, 131, 13316),
         pin_code: 0,
@@ -280,7 +280,7 @@ fn test_set_user_params() {
 #[test]
 #[ignore]
 fn test_get_relay_control() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.relay_control(RelayCommand::GetCurrentStatus, RelayPortNumber::AllPorts);
     println!("Relay status: {:?}", res);
     assert!(res.is_ok());
@@ -289,7 +289,7 @@ fn test_get_relay_control() {
 #[test]
 #[ignore]
 fn test_set_relay_control() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.relay_control(RelayCommand::DoorRelayPulse, RelayPortNumber::AllPorts);
     println!("Relay status after enable: {:?}", res);
     assert!(res.is_ok());
@@ -298,7 +298,7 @@ fn test_set_relay_control() {
 #[test]
 #[ignore]
 fn test_get_clock() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.get_real_time_clock();
     println!("Get RTC response: {:?}", res);
     assert!(res.is_ok());
@@ -307,7 +307,7 @@ fn test_get_clock() {
 #[test]
 #[ignore]
 fn test_set_clock() {
-    let client = create_client();
+    let mut client = create_client();
     let res = client.set_real_time_clock(Local::now());
     println!("Set RTC response: {:?}", res);
     assert!(res.is_ok());
