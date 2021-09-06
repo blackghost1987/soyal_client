@@ -48,6 +48,16 @@ impl SoyalClient {
         }
     }
 
+    pub fn close_connection(&mut self) -> io::Result<()> {
+        match self.stream.as_ref() {
+            Some(st) => { st.shutdown(std::net::Shutdown::Both)?; },
+            None => (),
+        }
+        self.stream = None;
+        warn!("Connection closed.");
+        Ok(())
+    }
+
     fn get_stream(&mut self) -> io::Result<&TcpStream> {
         if self.stream.is_none() {
             warn!("Reconnecting to reader...");
