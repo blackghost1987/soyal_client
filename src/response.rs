@@ -422,7 +422,7 @@ pub struct EventLogResponse {
     pub source: u8,
     pub timestamp: DateTime<Local>,
     pub port_number: EventPortNumber,
-    pub user_address_or_tag_id: u16, // Normal Access: User ID Other: last 2 bytes of the Card UID // TODO make this an enum?
+    pub user_address_or_tag_id: u16, // Normal Access: User ID - Other: last 2 bytes of the Card UID // TODO make this an enum?
     pub tag_id: TagId32,
     // Sub Code
     // Sub Func. // function code AlarmEvent

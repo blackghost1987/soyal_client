@@ -54,13 +54,17 @@ impl SoyalClient {
             None => (),
         }
         self.stream = None;
-        warn!("Connection closed.");
+        trace!("Connection closed.");
         Ok(())
+    }
+
+    pub fn is_open(&self) -> bool {
+        self.stream.is_some()
     }
 
     fn get_stream(&mut self) -> io::Result<&TcpStream> {
         if self.stream.is_none() {
-            warn!("Reconnecting to reader...");
+            trace!("Reconnecting to reader...");
             let address = SocketAddr::new(self.access_data.ip.into(), self.access_data.port);
             let new_stream = TcpStream::connect_timeout(&address, SoyalClient::TIMEOUT)?;
             self.stream = Some(new_stream);
