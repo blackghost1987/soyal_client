@@ -32,18 +32,22 @@ pub struct AccessData {
 
 pub struct SoyalClient {
     access_data: AccessData,
+    timeout: Duration,
     stream: Option<TcpStream>,
 }
 
 impl SoyalClient {
-    const TIMEOUT: Duration = Duration::from_secs(2);
-
     pub fn new(access_data: AccessData) -> SoyalClient {
+        SoyalClient::new_with_timeout(access_data, Duration::from_secs(2))
+    }
+
+    pub fn new_with_timeout(access_data: AccessData, timeout: Duration) -> SoyalClient {
         let address = SocketAddr::new(access_data.ip.into(), access_data.port);
-        let stream_res = TcpStream::connect_timeout(&address, SoyalClient::TIMEOUT);
+        let stream_res = TcpStream::connect_timeout(&address, timeout);
 
         SoyalClient {
-            access_data: access_data,
+            access_data,
+            timeout,
             stream: stream_res.ok(),
         }
     }
@@ -66,7 +70,7 @@ impl SoyalClient {
         if self.stream.is_none() {
             trace!("Reconnecting to reader...");
             let address = SocketAddr::new(self.access_data.ip.into(), self.access_data.port);
-            let new_stream = TcpStream::connect_timeout(&address, SoyalClient::TIMEOUT)?;
+            let new_stream = TcpStream::connect_timeout(&address, self.timeout)?;
             self.stream = Some(new_stream);
         }
         let stream = self.stream.as_ref().unwrap();
@@ -96,8 +100,10 @@ impl SoyalClient {
         self.send(command, data)?;
         let mut buffer = [0; 128];
 
+        let timeout = self.timeout.clone();
+
         let mut stream: &TcpStream = self.get_stream()?;
-        stream.set_read_timeout(Some(SoyalClient::TIMEOUT))?;
+        stream.set_read_timeout(Some(timeout))?;
         let size = stream.read(&mut buffer)?;
 
         trace!("Received {} bytes: {:?}", size, &buffer[0..size]);
