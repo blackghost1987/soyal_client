@@ -32,19 +32,29 @@ pub struct AccessData {
 
 pub struct SoyalClient {
     access_data: AccessData,
-    timeout: Duration,
+    connection_timeout: Duration,
+    read_timeout: Option<Duration>,
+    write_timeout: Option<Duration>,
     stream: Option<TcpStream>,
 }
 
 impl SoyalClient {
     pub fn new(access_data: AccessData) -> SoyalClient {
-        SoyalClient::new_with_timeout(access_data, Duration::from_secs(2))
+        let default_timeout = Duration::from_secs(2);
+        SoyalClient::new_with_timeout(access_data, default_timeout, Some(default_timeout), Some(default_timeout))
     }
 
-    pub fn new_with_timeout(access_data: AccessData, timeout: Duration) -> SoyalClient {
+    pub fn new_with_timeout(
+        access_data: AccessData,
+        connection_timeout: Duration,
+        read_timeout: Option<Duration>,
+        write_timeout: Option<Duration>,
+    ) -> SoyalClient {
         let mut client = SoyalClient {
             access_data,
-            timeout,
+            connection_timeout,
+            read_timeout,
+            write_timeout,
             stream: None,
         };
 
@@ -57,9 +67,9 @@ impl SoyalClient {
 
     fn open_connection(&mut self) -> io::Result<()> {
         let address = SocketAddr::new(self.access_data.ip.into(), self.access_data.port);
-        let new_stream = TcpStream::connect_timeout(&address, self.timeout)?;
-        new_stream.set_read_timeout(Some(self.timeout))?;
-        new_stream.set_write_timeout(Some(self.timeout))?;
+        let new_stream = TcpStream::connect_timeout(&address, self.connection_timeout)?;
+        new_stream.set_read_timeout(self.read_timeout)?;
+        new_stream.set_write_timeout(self.write_timeout)?;
         self.stream = Some(new_stream);
         Ok(())
     }
@@ -109,12 +119,9 @@ impl SoyalClient {
     }
 
     fn read(&mut self) -> io::Result<Vec<u8>> {
-        let mut buffer = [0; 128];
-
-        let timeout = self.timeout.clone();
-
         let mut stream: &TcpStream = self.get_stream()?;
-        stream.set_read_timeout(Some(timeout))?;
+
+        let mut buffer = [0; 128];
         let size = stream.read(&mut buffer)?;
 
         trace!("Received {} bytes: {:?}", size, &buffer[0..size]);
