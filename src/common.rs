@@ -1,7 +1,7 @@
-use std::fmt::Debug;
+use serde::{Deserialize, Serialize};
 use std::convert;
+use std::fmt::Debug;
 use std::result;
-use serde::{Serialize, Deserialize};
 
 pub const EXTENDED_HEADER: [u8; 4] = [0xFF, 0x00, 0x5A, 0xA5];
 

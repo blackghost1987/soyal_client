@@ -7,7 +7,7 @@ use either::Either;
 use enum_primitive::FromPrimitive;
 use log::*;
 use semver::Version;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::ops::BitXorAssign;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -22,16 +22,16 @@ pub trait Response<T> {
 
     fn get_message_part(raw: &[u8]) -> Result<&[u8]> {
         if raw.is_empty() {
-            return Err(ProtocolError::NoResponse.into())
+            return Err(ProtocolError::NoResponse.into());
         }
 
-        let non_header = match raw[0]  {
+        let non_header = match raw[0] {
             0x7E => Ok(&raw[1..]),
             0xFF => match raw[0..4] == EXTENDED_HEADER {
                 true => Ok(&raw[4..]),
-                false => Err(ProtocolError::UnexpectedHeaderValue)
+                false => Err(ProtocolError::UnexpectedHeaderValue),
             },
-            _    => Err(ProtocolError::UnexpectedFirstHeaderByte)
+            _ => Err(ProtocolError::UnexpectedFirstHeaderByte),
         }?;
 
         let expected_msg_length = u16::from_be_bytes([non_header[0], non_header[1]]) as usize;
@@ -45,13 +45,13 @@ pub trait Response<T> {
         let raw_msg = &non_header[2..];
 
         // get and test XOR and SUM values
-        let sum = raw_msg.get(msg_length-1).expect("Missing sum value");
-        let xor = raw_msg.get(msg_length-2).expect("Missing xor value");
+        let sum = raw_msg.get(msg_length - 1).expect("Missing sum value");
+        let xor = raw_msg.get(msg_length - 2).expect("Missing xor value");
 
         //trace!("Received XOR: {:#X?}, SUM {:#X?}", xor, sum);
 
         let mut xor_res: u8 = 0xFF;
-        for d in &raw_msg[..msg_length-2] {
+        for d in &raw_msg[..msg_length - 2] {
             xor_res.bitxor_assign(d);
         }
 
@@ -62,7 +62,7 @@ pub trait Response<T> {
         }
 
         let mut sum_res: u8 = 0;
-        for d in &raw_msg[..msg_length-1] {
+        for d in &raw_msg[..msg_length - 1] {
             sum_res = sum_res.wrapping_add(*d);
         }
 
@@ -73,7 +73,7 @@ pub trait Response<T> {
         }
 
         // ignore the last two XOR/SUM bytes
-        Ok(&raw_msg[0..msg_length-2])
+        Ok(&raw_msg[0..msg_length - 2])
     }
 
     fn get_data_parts(raw: &[u8], expected_command: Option<EchoCode>) -> Result<EchoResponse> {
@@ -83,7 +83,7 @@ pub trait Response<T> {
 
         if let Some(exp) = expected_command {
             if exp != command {
-                return Err(ProtocolError::UnexpectedCommandCode.into())
+                return Err(ProtocolError::UnexpectedCommandCode.into());
             }
         }
 
@@ -106,13 +106,13 @@ impl Response<PollResponse> for PollResponse {
         let msg = Self::get_message_part(raw)?;
 
         if msg.len() < 5 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let destination_id = msg[0];
-        let function_code  = msg[1];
-        let source         = msg[2];
-        let event_type     = msg[3];
+        let function_code = msg[1];
+        let source = msg[2];
+        let event_type = msg[3];
         let data = ControllerStatus::decode(event_type, &msg[4..])?;
 
         Ok(PollResponse {
@@ -140,7 +140,7 @@ impl Response<SerialNumberResponse> for SerialNumberResponse {
         let data = parts.data;
 
         if data.len() < 15 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let source = data[0];
@@ -160,10 +160,10 @@ pub struct RelayDelayResponse {
     pub destination_id: u8,
     pub command: EchoCode,
     pub source: u8,
-    pub main_port_door_relay_time:    u16, // 10ms
+    pub main_port_door_relay_time: u16,    // 10ms
     pub wiegand_port_door_relay_time: u16, // 10ms
-    pub alarm_relay_time:       u16, // 10ms
-    pub lift_controller_time:   u16, // 10ms
+    pub alarm_relay_time: u16,             // 10ms
+    pub lift_controller_time: u16,         // 10ms
 }
 
 impl Response<RelayDelayResponse> for RelayDelayResponse {
@@ -172,13 +172,13 @@ impl Response<RelayDelayResponse> for RelayDelayResponse {
         let data = parts.data;
 
         if data.len() < 9 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let source = data[0];
-        let main_port_door_relay_time    = u16::from_be_bytes([data[1], data[2]]);
+        let main_port_door_relay_time = u16::from_be_bytes([data[1], data[2]]);
         let wiegand_port_door_relay_time = u16::from_be_bytes([data[3], data[4]]);
-        let alarm_relay_time     = u16::from_be_bytes([data[5], data[6]]);
+        let alarm_relay_time = u16::from_be_bytes([data[5], data[6]]);
         let lift_controller_time = u16::from_be_bytes([data[7], data[8]]);
 
         Ok(RelayDelayResponse {
@@ -207,7 +207,7 @@ impl Response<EditPasswordResponse> for EditPasswordResponse {
         let data = parts.data;
 
         if data.len() < 5 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let source = data[0];
@@ -237,7 +237,7 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
         let data = parts.data;
 
         if data.len() < 43 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let source = data[0];
@@ -250,10 +250,9 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
             source,
             controller_type,
             controller_options,
-       })
+        })
     }
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IpAndMacAddressResponse {
@@ -269,7 +268,7 @@ impl Response<IpAndMacAddressResponse> for IpAndMacAddressResponse {
         let data = parts.data;
 
         if data.len() < 32 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let source = data[0];
@@ -281,11 +280,10 @@ impl Response<IpAndMacAddressResponse> for IpAndMacAddressResponse {
             destination_id: parts.destination_id,
             command: parts.command,
             source,
-            address_data
+            address_data,
         })
     }
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RemoteTCPServerParamsResponse {
@@ -301,7 +299,7 @@ impl Response<RemoteTCPServerParamsResponse> for RemoteTCPServerParamsResponse {
         let data = parts.data;
 
         if data.len() < 13 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let source = data[0];
@@ -311,7 +309,7 @@ impl Response<RemoteTCPServerParamsResponse> for RemoteTCPServerParamsResponse {
             destination_id: parts.destination_id,
             command: parts.command,
             source,
-            remote_server_params
+            remote_server_params,
         })
     }
 }
@@ -320,8 +318,8 @@ impl Response<RemoteTCPServerParamsResponse> for RemoteTCPServerParamsResponse {
 pub struct EventLogStatusResponse {
     pub destination_id: u8,
     pub command: EchoCode,
-    pub event_log_counter:  u8,
-    pub queue_input_point:  u8,
+    pub event_log_counter: u8,
+    pub queue_input_point: u8,
     pub queue_output_point: u8,
 }
 
@@ -331,14 +329,14 @@ impl Response<EventLogStatusResponse> for EventLogStatusResponse {
         let data = parts.data;
 
         if data.len() < 3 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         Ok(EventLogStatusResponse {
             destination_id: parts.destination_id,
             command: parts.command,
-            event_log_counter:  data[0],
-            queue_input_point:  data[1],
+            event_log_counter: data[0],
+            queue_input_point: data[1],
             queue_output_point: data[2],
         })
     }
@@ -357,14 +355,14 @@ impl Response<AckResponse> for AckResponse {
         let data = parts.data;
 
         if data.is_empty() {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let source = data[0];
-        
+
         Ok(AckResponse {
             destination_id: parts.destination_id,
-            source
+            source,
         })
     }
 }
@@ -382,14 +380,14 @@ impl Response<NackResponse> for NackResponse {
         let data = parts.data;
 
         if data.is_empty() {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let source = data[0];
 
         Ok(NackResponse {
             destination_id: parts.destination_id,
-            source
+            source,
         })
     }
 }
@@ -411,7 +409,8 @@ impl AckOrNack {
         match AckResponse::decode(&raw) {
             Ok(x) => Ok(Either::Right(x)),
             Err(_) => NackResponse::decode(&raw).map(Either::Left),
-        }.map(|res| AckOrNack { res })
+        }
+        .map(|res| AckOrNack { res })
     }
 }
 
@@ -430,7 +429,7 @@ pub struct EventLogResponse {
     // User level
     pub door_number: u8,
     pub sor_deduction_amount: u16,
-    pub sor_balance: u16, // or 8 byte UID???
+    pub sor_balance: u16,                // or 8 byte UID???
     pub user_inputted_code: Option<u32>, // only available for function code InvalidUserPIN
 }
 
@@ -443,7 +442,7 @@ impl Response<EventLogResponse> for EventLogResponse {
         let data = &msg[2..];
 
         if data.len() < 25 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let source = data[0];
@@ -464,11 +463,13 @@ impl Response<EventLogResponse> for EventLogResponse {
         let door_number = data[17];
 
         let sor_deduction_amount = u16::from_be_bytes([data[21], data[22]]);
-        let sor_balance          = u16::from_be_bytes([data[23], data[24]]);
+        let sor_balance = u16::from_be_bytes([data[23], data[24]]);
 
         let user_inputted_code = if function_code == EventFunctionCode::InvalidUserPIN {
             Some(u32::from_be_bytes([data[25], data[26], data[27], data[28]]))
-        } else { None };
+        } else {
+            None
+        };
 
         Ok(EventLogResponse {
             destination_id,
@@ -502,7 +503,7 @@ impl Response<UserParametersResponse> for UserParametersResponse {
         //trace!("User data: {:?}, len: {}", data, data.len());
 
         if data.len() < 25 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let source = data[0];
@@ -527,7 +528,7 @@ pub struct RelayStatusResponse {
     pub relay_port: RelayPortStatus,
     pub main_port_options: ControllerPortOptions,
     pub wiegand_port_options: ControllerPortOptions,
-    pub main_port_arming:    bool,
+    pub main_port_arming: bool,
     pub wiegand_port_arming: bool,
 }
 
@@ -537,22 +538,21 @@ impl Response<RelayStatusResponse> for RelayStatusResponse {
         let data = parts.data;
 
         if data.len() < 9 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let source = data[0];
         let firmware_major = (data[1] & 0xF0) >> 4;
         let firmware_minor = data[1] & 0x0F;
         let firmware_version = semver::Version::new(firmware_major as u64, firmware_minor as u64, 0);
-        let di_port    = DIPortStatus::decode(data[2]);
+        let di_port = DIPortStatus::decode(data[2]);
         let relay_port = RelayPortStatus::decode(data[3]);
-        let main_port_options    = ControllerPortOptions::decode(data[4]);
+        let main_port_options = ControllerPortOptions::decode(data[4]);
         let wiegand_port_options = ControllerPortOptions::decode(data[5]);
         // data[6] reserved
-        let main_port_arming    = data[7] & 0b00000001 != 0;
+        let main_port_arming = data[7] & 0b00000001 != 0;
         let wiegand_port_arming = data[7] & 0b00000010 != 0;
         // data[8] reserved
-
 
         Ok(RelayStatusResponse {
             destination_id: parts.destination_id,
@@ -600,7 +600,7 @@ mod tests {
 
     #[test]
     fn decode_status_io_response() {
-        let raw = vec!(255, 0, 90, 165, 0, 10, 0, 9, 1, 0, 1, 0, 16, 0, 230, 1);
+        let raw = vec![255, 0, 90, 165, 0, 10, 0, 9, 1, 0, 1, 0, 16, 0, 230, 1];
         let d = PollResponse::decode(&raw);
         assert!(d.is_ok());
         if let Ok(echo) = d {
@@ -608,34 +608,37 @@ mod tests {
             assert_eq!(echo.function_code, 9);
             assert_eq!(echo.source, 1);
             assert_eq!(echo.event_type, 0);
-            assert_eq!(echo.data, ControllerStatus::IoStatus(IoStatusData {
-                status_data: StatusData {
-                    keypad_locked: false,
-                    door_release_output: false,
-                    alarm_output: false,
-                    arming: false,
-                    controller_alarm: false,
-                    egress_released: false,
-                    door_open: true
-                },
-                alarm_type: None,
-                controller_options: ControllerPortOptions {
-                    anti_pass_back_enabled: false,
-                    anti_pass_back_in: false,
-                    force_open_alarm: false,
-                    egress_button: true,
-                    skip_pin_check: false,
-                    auto_open_zone: false,
-                    auto_lock_door: false,
-                    time_attendance_disabled: false
-                },
-            }));
+            assert_eq!(
+                echo.data,
+                ControllerStatus::IoStatus(IoStatusData {
+                    status_data: StatusData {
+                        keypad_locked: false,
+                        door_release_output: false,
+                        alarm_output: false,
+                        arming: false,
+                        controller_alarm: false,
+                        egress_released: false,
+                        door_open: true
+                    },
+                    alarm_type: None,
+                    controller_options: ControllerPortOptions {
+                        anti_pass_back_enabled: false,
+                        anti_pass_back_in: false,
+                        force_open_alarm: false,
+                        egress_button: true,
+                        skip_pin_check: false,
+                        auto_open_zone: false,
+                        auto_lock_door: false,
+                        time_attendance_disabled: false
+                    },
+                })
+            );
         }
     }
 
     #[test]
     fn decode_status_all_keys_response() {
-        let raw = vec!(255, 0, 90, 165, 0, 21, 0, 9, 1, 1, 139, 4, 210, 0, 16, 1, 0, 5, 0, 3, 4, 0, 1, 11, 0, 178, 71);
+        let raw = vec![255, 0, 90, 165, 0, 21, 0, 9, 1, 1, 139, 4, 210, 0, 16, 1, 0, 5, 0, 3, 4, 0, 1, 11, 0, 178, 71];
         let d = PollResponse::decode(&raw);
         assert!(d.is_ok());
         if let Ok(echo) = d {
@@ -643,26 +646,31 @@ mod tests {
             assert_eq!(echo.function_code, 9);
             assert_eq!(echo.source, 1);
             assert_eq!(echo.event_type, 1);
-            assert_eq!(echo.data, ControllerStatus::AllKeysPressed(AllKeysPressedData {
-                fifth_key_data: None,
-                input_value: 1234,
-                device_params: ControllerPortOptions {
-                    anti_pass_back_enabled: false,
-                    anti_pass_back_in: false,
-                    force_open_alarm: false,
-                    egress_button: true,
-                    skip_pin_check: false,
-                    auto_open_zone: false,
-                    auto_lock_door: false,
-                    time_attendance_disabled: false
-                },
-            }));
+            assert_eq!(
+                echo.data,
+                ControllerStatus::AllKeysPressed(AllKeysPressedData {
+                    fifth_key_data: None,
+                    input_value: 1234,
+                    device_params: ControllerPortOptions {
+                        anti_pass_back_enabled: false,
+                        anti_pass_back_in: false,
+                        force_open_alarm: false,
+                        egress_button: true,
+                        skip_pin_check: false,
+                        auto_open_zone: false,
+                        auto_lock_door: false,
+                        time_attendance_disabled: false
+                    },
+                })
+            );
         }
     }
 
     #[test]
     fn decode_status_new_card_response() {
-        let raw = vec!(255, 0, 90, 165, 0, 23, 0, 9, 1, 2, 11, 18, 221, 0, 0, 186, 139, 0, 16, 0, 138, 0, 0, 0, 0, 0, 0, 154, 127);
+        let raw = vec![
+            255, 0, 90, 165, 0, 23, 0, 9, 1, 2, 11, 18, 221, 0, 0, 186, 139, 0, 16, 0, 138, 0, 0, 0, 0, 0, 0, 154, 127,
+        ];
         let d = PollResponse::decode(&raw);
         assert!(d.is_ok());
         if let Ok(echo) = d {
@@ -670,29 +678,35 @@ mod tests {
             assert_eq!(echo.function_code, 9);
             assert_eq!(echo.source, 1);
             assert_eq!(echo.event_type, 2);
-            assert_eq!(echo.data, ControllerStatus::NewCardPresent(NewCardPresentData {
-                card_id: TagId32::new(4829, 47755),
-                input_value: 0,
-                id_em4001: 0,
-                device_params: ControllerPortOptions {
-                    anti_pass_back_enabled: false,
-                    anti_pass_back_in: false,
-                    force_open_alarm: false,
-                    egress_button: true,
-                    skip_pin_check: false,
-                    auto_open_zone: false,
-                    auto_lock_door: false,
-                    time_attendance_disabled: false
-                },
-                from_wiegand: false,
-                setting_forced_open_alarm: false
-            }));
+            assert_eq!(
+                echo.data,
+                ControllerStatus::NewCardPresent(NewCardPresentData {
+                    card_id: TagId32::new(4829, 47755),
+                    input_value: 0,
+                    id_em4001: 0,
+                    device_params: ControllerPortOptions {
+                        anti_pass_back_enabled: false,
+                        anti_pass_back_in: false,
+                        force_open_alarm: false,
+                        egress_button: true,
+                        skip_pin_check: false,
+                        auto_open_zone: false,
+                        auto_lock_door: false,
+                        time_attendance_disabled: false
+                    },
+                    from_wiegand: false,
+                    setting_forced_open_alarm: false
+                })
+            );
         }
     }
 
     #[test]
     fn decode_controller_options_response() {
-        let raw = vec!(255, 0, 90, 165, 0, 57, 0, 3, 1, 193, 1, 2, 0, 1, 226, 64, 0, 0, 0, 0, 0, 0, 0, 0, 4, 210, 0, 0, 0, 0, 1, 4, 0, 100, 2, 188, 2, 188, 5, 220, 48, 16, 1, 17, 15, 15, 0, 8, 0, 1, 1, 65, 24, 9, 5, 0, 0, 0, 3, 3, 0, 159, 13);
+        let raw = vec![
+            255, 0, 90, 165, 0, 57, 0, 3, 1, 193, 1, 2, 0, 1, 226, 64, 0, 0, 0, 0, 0, 0, 0, 0, 4, 210, 0, 0, 0, 0, 1, 4, 0, 100, 2, 188, 2, 188, 5, 220, 48,
+            16, 1, 17, 15, 15, 0, 8, 0, 1, 1, 65, 24, 9, 5, 0, 0, 0, 3, 3, 0, 159, 13,
+        ];
         let d = ControllerOptionsResponse::decode(&raw);
         assert!(d.is_ok());
         if let Ok(o) = d {
@@ -711,10 +725,58 @@ mod tests {
             assert_eq!(o.controller_options.main_port_door_relay_time, 700);
             assert_eq!(o.controller_options.wiegand_port_door_relay_time, 700);
             assert_eq!(o.controller_options.alarm_relay_time, 1500);
-            assert_eq!(o.controller_options.main_port_options, ControllerPortOptions { anti_pass_back_enabled: false, anti_pass_back_in: false, force_open_alarm: true,  egress_button: true, skip_pin_check: false, auto_open_zone: false, auto_lock_door: false, time_attendance_disabled: false });
-            assert_eq!(o.controller_options.wiegand_port_options, ControllerPortOptions { anti_pass_back_enabled: false, anti_pass_back_in: false, force_open_alarm: false, egress_button: true, skip_pin_check: false, auto_open_zone: false, auto_lock_door: false, time_attendance_disabled: false });
-            assert_eq!(o.controller_options.main_port_extended_options, ExtendedControllerOptions { door_relay_active_in_auto_open_time_zone: false, stop_alarm_at_door_closed: false, free_tag_access_mode: false, use_main_door_relay_for_wiegand_port: false, auto_disarmed_time_zone: false, key_pad_inhibited: false, fingerprint_only_enabled: false, egress_button_sound: true });
-            assert_eq!(o.controller_options.wiegand_port_extended_options, ExtendedControllerOptions { door_relay_active_in_auto_open_time_zone: false, stop_alarm_at_door_closed: false, free_tag_access_mode: false, use_main_door_relay_for_wiegand_port: true,  auto_disarmed_time_zone: false, key_pad_inhibited: false, fingerprint_only_enabled: false, egress_button_sound: true });
+            assert_eq!(
+                o.controller_options.main_port_options,
+                ControllerPortOptions {
+                    anti_pass_back_enabled: false,
+                    anti_pass_back_in: false,
+                    force_open_alarm: true,
+                    egress_button: true,
+                    skip_pin_check: false,
+                    auto_open_zone: false,
+                    auto_lock_door: false,
+                    time_attendance_disabled: false
+                }
+            );
+            assert_eq!(
+                o.controller_options.wiegand_port_options,
+                ControllerPortOptions {
+                    anti_pass_back_enabled: false,
+                    anti_pass_back_in: false,
+                    force_open_alarm: false,
+                    egress_button: true,
+                    skip_pin_check: false,
+                    auto_open_zone: false,
+                    auto_lock_door: false,
+                    time_attendance_disabled: false
+                }
+            );
+            assert_eq!(
+                o.controller_options.main_port_extended_options,
+                ExtendedControllerOptions {
+                    door_relay_active_in_auto_open_time_zone: false,
+                    stop_alarm_at_door_closed: false,
+                    free_tag_access_mode: false,
+                    use_main_door_relay_for_wiegand_port: false,
+                    auto_disarmed_time_zone: false,
+                    key_pad_inhibited: false,
+                    fingerprint_only_enabled: false,
+                    egress_button_sound: true
+                }
+            );
+            assert_eq!(
+                o.controller_options.wiegand_port_extended_options,
+                ExtendedControllerOptions {
+                    door_relay_active_in_auto_open_time_zone: false,
+                    stop_alarm_at_door_closed: false,
+                    free_tag_access_mode: false,
+                    use_main_door_relay_for_wiegand_port: true,
+                    auto_disarmed_time_zone: false,
+                    key_pad_inhibited: false,
+                    fingerprint_only_enabled: false,
+                    egress_button_sound: true
+                }
+            );
             assert_eq!(o.controller_options.main_port_door_close_time, 15);
             assert_eq!(o.controller_options.wiegand_port_door_close_time, 15);
             assert_eq!(o.controller_options.main_port_arming, false);

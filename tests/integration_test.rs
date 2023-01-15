@@ -1,10 +1,10 @@
 use std::net::Ipv4Addr;
 
-use soyal_client::*;
-use chrono::{NaiveDate, Local};
+use chrono::{Local, NaiveDate};
 use macaddr::MacAddr6;
-use soyal_client::structs::*;
 use soyal_client::enums::*;
+use soyal_client::structs::*;
+use soyal_client::*;
 
 // WARNING: Hardware-in-the-loop tests! Set real device IP here:
 const IP_ADDR: [u8; 4] = [192, 168, 1, 127];
@@ -61,7 +61,7 @@ fn test_set_controller_options() {
             skip_pin_check: false,
             auto_open_zone: false,
             auto_lock_door: false,
-            time_attendance_disabled: false
+            time_attendance_disabled: false,
         },
         wiegand_port_options: ControllerPortOptions {
             anti_pass_back_enabled: false,
@@ -71,7 +71,7 @@ fn test_set_controller_options() {
             skip_pin_check: false,
             auto_open_zone: false,
             auto_lock_door: false,
-            time_attendance_disabled: false
+            time_attendance_disabled: false,
         },
         main_port_extended_options: ExtendedControllerOptions {
             door_relay_active_in_auto_open_time_zone: false,
@@ -81,7 +81,7 @@ fn test_set_controller_options() {
             auto_disarmed_time_zone: false,
             key_pad_inhibited: false,
             fingerprint_only_enabled: false,
-            egress_button_sound: true
+            egress_button_sound: true,
         },
         wiegand_port_extended_options: ExtendedControllerOptions {
             door_relay_active_in_auto_open_time_zone: false,
@@ -91,7 +91,7 @@ fn test_set_controller_options() {
             auto_disarmed_time_zone: false,
             key_pad_inhibited: false,
             fingerprint_only_enabled: false,
-            egress_button_sound: true
+            egress_button_sound: true,
         },
         main_port_door_close_time: 15,
         wiegand_port_door_close_time: 15,
@@ -104,7 +104,7 @@ fn test_set_controller_options() {
         uart_data: UARTData {
             uart2_type: UART2Type::LiftController,
             uart2_baud_rate: UartBaudRate::Baud9600,
-            uart3_type: UART3Type::YungTAILiftPort
+            uart3_type: UART3Type::YungTAILiftPort,
         },
         common_options: CommonOptions {
             enable_black_table_check: false,
@@ -113,13 +113,13 @@ fn test_set_controller_options() {
             wiegand_signal_output_disable: true,
             lcd_display_date_in_dd_mm: false,
             auto_reset_anti_pass_back: false,
-            trigger_alarm_on_expired_user: false
+            trigger_alarm_on_expired_user: false,
         },
         display_options: DisplayOptions {
             fingerprint_enroll_duplication_check: false,
             auto_duty_code_shift_table_enabled: false,
             show_wiegand_port_message_on_main_lcd: true,
-            uid_display_format: UIDDisplayFormat::WG32
+            uid_display_format: UIDDisplayFormat::WG32,
         },
         keyboard_lock_error_times: Some(0),
         host_port_baud: Some(HostBaudRate::Baud9600),
@@ -142,7 +142,6 @@ fn test_set_controller_options() {
     assert!(res.is_ok());
 }
 
-
 #[test]
 #[ignore]
 fn test_get_remote_tcp_params() {
@@ -160,12 +159,11 @@ fn test_set_remote_tcp_params() {
         first_remote_address: Ipv4Addr::UNSPECIFIED,
         first_remote_port: 0,
         second_remote_address: Ipv4Addr::UNSPECIFIED,
-        second_remote_port: 0
+        second_remote_port: 0,
     });
     println!("TCP params setting response: {:?}", res);
     assert!(res.is_ok());
 }
-
 
 #[test]
 #[ignore]
@@ -186,9 +184,9 @@ fn test_set_ip_and_mac_address() {
         subnet_mask: Ipv4Addr::new(255, 255, 255, 0),
         gateway_address: Ipv4Addr::new(192, 168, 1, 254),
         tcp_port: 1621,
-        dns_primary:   Ipv4Addr::new(168, 95, 1, 1),
+        dns_primary: Ipv4Addr::new(168, 95, 1, 1),
         dns_secondary: Ipv4Addr::new(168, 95, 192, 1),
-        http_server_port: 80
+        http_server_port: 80,
     });
     println!("TCP params setting response: {:?}", res);
     assert!(res.is_ok());
@@ -289,13 +287,16 @@ fn test_set_user_params() {
             fingerprint_omitted_after_card_rec: true,
             expire_check: false,
             anti_pass_back_control: true,
-            password_change_available: true
+            password_change_available: true,
         },
-        zone: UserAccessTimeZone { wiegand_port_same_time_zone: true, user_time_zone: 0 },
+        zone: UserAccessTimeZone {
+            wiegand_port_same_time_zone: true,
+            user_time_zone: 0,
+        },
         available_doors_bitmap: 0xFFFF,
         last_allowed_date: NaiveDate::from_ymd(2099, 12, 31),
         level: 0,
-        enable_anti_pass_back_check: false
+        enable_anti_pass_back_check: false,
     };
     let res = client.set_user_parameters(2, user_params);
     println!("User params: {:?}", res);
@@ -348,7 +349,7 @@ fn test_set_hosting_flag() {
         inhibit_125khz_tags: false,
         inhibit_13_56mhz_tags: false,
         alarm_on_invalid_tag: false,
-        disable_buzzer: false
+        disable_buzzer: false,
     });
     println!("Set Hosting Flag response: {:?}", res);
     assert!(res.is_ok());

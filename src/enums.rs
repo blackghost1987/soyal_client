@@ -4,7 +4,7 @@ use crate::structs::*;
 use std::fmt::Debug;
 use std::{convert, fmt};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 enum_from_primitive! {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -51,17 +51,17 @@ impl UserAccessMode {
     pub fn decode(msb: bool, lsb: bool) -> UserAccessMode {
         match (msb, lsb) {
             (false, false) => UserAccessMode::Invalid,
-            (false, true)  => UserAccessMode::ReadOnly,
-            (true, false)  => UserAccessMode::CardOrPIN,
-            (true, true)   => UserAccessMode::CardPlusPIN,
+            (false, true) => UserAccessMode::ReadOnly,
+            (true, false) => UserAccessMode::CardOrPIN,
+            (true, true) => UserAccessMode::CardPlusPIN,
         }
     }
 
     pub fn encode(&self) -> u8 {
         match self {
-            UserAccessMode::Invalid =>     0b00000000,
-            UserAccessMode::ReadOnly =>    0b00000001,
-            UserAccessMode::CardOrPIN =>   0b00000010,
+            UserAccessMode::Invalid => 0b00000000,
+            UserAccessMode::ReadOnly => 0b00000001,
+            UserAccessMode::CardOrPIN => 0b00000010,
             UserAccessMode::CardPlusPIN => 0b00000011,
         }
     }
@@ -84,7 +84,11 @@ pub enum AlarmType {
 
 impl AlarmType {
     pub fn decode(data: u8) -> AlarmType {
-        if data >= 128 { AlarmType::ForceAlarm } else { AlarmType::OpenTooLongAlarm }
+        if data >= 128 {
+            AlarmType::ForceAlarm
+        } else {
+            AlarmType::OpenTooLongAlarm
+        }
     }
 }
 
@@ -139,7 +143,7 @@ pub enum RS485PortFunction {
 }
 
 enum_from_primitive! {
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy , PartialEq, Serialize, Deserialize)]
 pub enum UIDDisplayFormat {
     Disabled = 0b00000000,
     WG32     = 0b00000001,
@@ -150,7 +154,6 @@ pub enum UIDDisplayFormat {
     Custom   = 0b00000110,
 }
 }
-
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ControllerStatus {
@@ -305,15 +308,15 @@ pub enum RelayPortNumber {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum RelayCommand {
-    GetCurrentStatus  = 0x00,
-    EnableArmedState  = 0x80,
+    GetCurrentStatus = 0x00,
+    EnableArmedState = 0x80,
     DisableArmedState = 0x81,
-    DoorRelayOn       = 0x82,
-    DoorRelayOff      = 0x83,
-    DoorRelayPulse    = 0x84,
-    AlarmRelayOn      = 0x85,
-    AlarmRelayOff     = 0x86,
-    AlarmRelayPulse   = 0x87,
+    DoorRelayOn = 0x82,
+    DoorRelayOff = 0x83,
+    DoorRelayPulse = 0x84,
+    AlarmRelayOn = 0x85,
+    AlarmRelayOff = 0x86,
+    AlarmRelayPulse = 0x87,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -332,9 +335,13 @@ impl fmt::Display for TagId {
 }
 
 impl convert::From<TagId32> for TagId {
-    fn from(t: TagId32) -> TagId { TagId::TagId32(t) }
+    fn from(t: TagId32) -> TagId {
+        TagId::TagId32(t)
+    }
 }
 
 impl convert::From<TagId64> for TagId {
-    fn from(t: TagId64) -> TagId { TagId::TagId64(t) }
+    fn from(t: TagId64) -> TagId {
+        TagId::TagId64(t)
+    }
 }

@@ -1,14 +1,14 @@
-use crate::enums::*;
 use crate::common::*;
+use crate::enums::*;
 
 use std::fmt::Debug;
 use std::net::Ipv4Addr;
 
-use semver::Version;
-use serde::{Serialize, Deserialize};
-use chrono::{NaiveDate, Datelike, DateTime, Local, TimeZone};
-use macaddr::MacAddr6;
+use chrono::{DateTime, Datelike, Local, NaiveDate, TimeZone};
 use enum_primitive::FromPrimitive;
+use macaddr::MacAddr6;
+use semver::Version;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -25,14 +25,14 @@ pub struct StatusData {
 impl StatusData {
     pub fn decode(data: u8) -> StatusData {
         StatusData {
-            keypad_locked:       data & 0b10000000 != 0,
+            keypad_locked: data & 0b10000000 != 0,
             door_release_output: data & 0b01000000 != 0,
-            alarm_output:        data & 0b00100000 != 0,
-            arming:              data & 0b00010000 != 0,
-            controller_alarm:    data & 0b00001000 != 0,
+            alarm_output: data & 0b00100000 != 0,
+            arming: data & 0b00010000 != 0,
+            controller_alarm: data & 0b00001000 != 0,
             // RFU:              data & 0b00000100 != 0,
-            egress_released:     data & 0b00000010 != 0,
-            door_open:           data & 0b00000001 != 0,
+            egress_released: data & 0b00000010 != 0,
+            door_open: data & 0b00000001 != 0,
         }
     }
 }
@@ -51,26 +51,40 @@ pub struct SlaveFlags {
 impl SlaveFlags {
     pub fn decode(data: u8) -> SlaveFlags {
         SlaveFlags {
-            slave_mode_enabled:       data & 0b10000000 != 0,
-            keyboard_locked:          data & 0b01000000 != 0,
-            lcd_update_locked:        data & 0b00100000 != 0,
-            inhibit_125khz_tags:      data & 0b00010000 != 0,
-            inhibit_13_56mhz_tags:    data & 0b00001000 != 0,
+            slave_mode_enabled: data & 0b10000000 != 0,
+            keyboard_locked: data & 0b01000000 != 0,
+            lcd_update_locked: data & 0b00100000 != 0,
+            inhibit_125khz_tags: data & 0b00010000 != 0,
+            inhibit_13_56mhz_tags: data & 0b00001000 != 0,
             fire_alarm_input_enabled: data & 0b00000100 != 0,
-            alarm_on_invalid_tag:     data & 0b00000010 != 0,
+            alarm_on_invalid_tag: data & 0b00000010 != 0,
             // bit 0 reserved
         }
     }
 
     pub fn encode(&self) -> u8 {
         let mut data = 0b00000000;
-        if self.slave_mode_enabled       { data += 0b10000000; }
-        if self.keyboard_locked          { data += 0b01000000; }
-        if self.lcd_update_locked        { data += 0b00100000; }
-        if self.inhibit_125khz_tags      { data += 0b00010000; }
-        if self.inhibit_13_56mhz_tags    { data += 0b00001000; }
-        if self.fire_alarm_input_enabled { data += 0b00000100; }
-        if self.alarm_on_invalid_tag     { data += 0b00000010; }
+        if self.slave_mode_enabled {
+            data += 0b10000000;
+        }
+        if self.keyboard_locked {
+            data += 0b01000000;
+        }
+        if self.lcd_update_locked {
+            data += 0b00100000;
+        }
+        if self.inhibit_125khz_tags {
+            data += 0b00010000;
+        }
+        if self.inhibit_13_56mhz_tags {
+            data += 0b00001000;
+        }
+        if self.fire_alarm_input_enabled {
+            data += 0b00000100;
+        }
+        if self.alarm_on_invalid_tag {
+            data += 0b00000010;
+        }
         data
     }
 }
@@ -91,11 +105,11 @@ impl UARTData {
                 0b00000101 => Ok(UART2Type::SlavePortAR716E),
                 0b00001001 => Ok(UART2Type::VoiceModuleOrReader),
                 0b00001101 => Ok(UART2Type::SerialPrinter),
-                _ => Err(ProtocolError::UnknownUartType) // should not happen
+                _ => Err(ProtocolError::UnknownUartType), // should not happen
             },
             0b00000010 => Err(ProtocolError::UnknownUartType), // reserved
             0b00000011 => Ok(UART2Type::Fingerprint9000),
-            _ => Err(ProtocolError::UnknownUartType) // should not happen
+            _ => Err(ProtocolError::UnknownUartType), // should not happen
         }?;
 
         let baud_rate_bits = data & 0b11000000;
@@ -111,12 +125,12 @@ impl UARTData {
 
     pub fn encode(&self) -> u8 {
         let mut data = match self.uart2_type {
-            UART2Type::Fingerprint9000 =>     0b00000011,
-            UART2Type::Fingerprint3DO1500 =>  0b00000000,
-            UART2Type::LiftController =>      0b00000001,
-            UART2Type::SlavePortAR716E =>     0b00000101,
+            UART2Type::Fingerprint9000 => 0b00000011,
+            UART2Type::Fingerprint3DO1500 => 0b00000000,
+            UART2Type::LiftController => 0b00000001,
+            UART2Type::SlavePortAR716E => 0b00000101,
             UART2Type::VoiceModuleOrReader => 0b00001001,
-            UART2Type::SerialPrinter =>       0b00001101,
+            UART2Type::SerialPrinter => 0b00001101,
         };
 
         data += self.uart2_baud_rate as u8;
@@ -142,25 +156,37 @@ impl CommonOptions {
         let rs485_port_function = RS485PortFunction::from_u8(data & 0b00110000).expect("RS485 port decoding should not fail");
 
         CommonOptions {
-            enable_black_table_check:      data & 0b10000000 != 0,
-            show_local_language_manual:    data & 0b01000000 != 0,
+            enable_black_table_check: data & 0b10000000 != 0,
+            show_local_language_manual: data & 0b01000000 != 0,
             rs485_port_function,
             wiegand_signal_output_disable: data & 0b00001000 != 0,
-            lcd_display_date_in_dd_mm:     data & 0b00000100 != 0,
-            auto_reset_anti_pass_back:     data & 0b00000010 != 0,
+            lcd_display_date_in_dd_mm: data & 0b00000100 != 0,
+            auto_reset_anti_pass_back: data & 0b00000010 != 0,
             trigger_alarm_on_expired_user: data & 0b00000001 != 0,
         }
     }
 
     pub fn encode(&self) -> u8 {
         let mut data = 0b00000000;
-        if self.enable_black_table_check      { data += 0b10000000; }
-        if self.show_local_language_manual    { data += 0b01000000; }
+        if self.enable_black_table_check {
+            data += 0b10000000;
+        }
+        if self.show_local_language_manual {
+            data += 0b01000000;
+        }
         data += self.rs485_port_function as u8;
-        if self.wiegand_signal_output_disable { data += 0b00001000; }
-        if self.lcd_display_date_in_dd_mm     { data += 0b00000100; }
-        if self.auto_reset_anti_pass_back     { data += 0b00000010; }
-        if self.trigger_alarm_on_expired_user { data += 0b00000001; }
+        if self.wiegand_signal_output_disable {
+            data += 0b00001000;
+        }
+        if self.lcd_display_date_in_dd_mm {
+            data += 0b00000100;
+        }
+        if self.auto_reset_anti_pass_back {
+            data += 0b00000010;
+        }
+        if self.trigger_alarm_on_expired_user {
+            data += 0b00000001;
+        }
         data
     }
 }
@@ -178,8 +204,8 @@ impl DisplayOptions {
         let uid_display_format = UIDDisplayFormat::from_u8(data & 0b00000111).expect("UID display format decoding should not fail");
 
         DisplayOptions {
-            fingerprint_enroll_duplication_check:  data & 0b00100000 != 0,
-            auto_duty_code_shift_table_enabled:    data & 0b00010000 != 0,
+            fingerprint_enroll_duplication_check: data & 0b00100000 != 0,
+            auto_duty_code_shift_table_enabled: data & 0b00010000 != 0,
             show_wiegand_port_message_on_main_lcd: data & 0b00001000 != 0,
             uid_display_format,
         }
@@ -187,42 +213,47 @@ impl DisplayOptions {
 
     pub fn encode(&self) -> u8 {
         let mut data = 0b00000000;
-        if self.fingerprint_enroll_duplication_check  { data += 0b00100000; }
-        if self.auto_duty_code_shift_table_enabled    { data += 0b00010000; }
-        if self.show_wiegand_port_message_on_main_lcd { data += 0b00001000; }
+        if self.fingerprint_enroll_duplication_check {
+            data += 0b00100000;
+        }
+        if self.auto_duty_code_shift_table_enabled {
+            data += 0b00010000;
+        }
+        if self.show_wiegand_port_message_on_main_lcd {
+            data += 0b00001000;
+        }
         data += self.uid_display_format as u8;
         data
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ControllerOptions {
-    pub main_port_door_number:    u8,
+    pub main_port_door_number: u8,
     pub wiegand_port_door_number: u8,
-    pub edit_password:           u32,
+    pub edit_password: u32,
     pub master_user_range_start: u32,
-    pub master_user_range_end:   u32,
-    pub general_password:        u16,
-    pub duress_code:             u16,
+    pub master_user_range_end: u32,
+    pub general_password: u16,
+    pub duress_code: u16,
     // Data20-21: reserved
-    pub connected_reader_bitmask:     u16, // AR721Ev2 only
-    pub tag_hold_time:                u16, // 10ms
-    pub main_port_door_relay_time:    u16, // 10ms
+    pub connected_reader_bitmask: u16,     // AR721Ev2 only
+    pub tag_hold_time: u16,                // 10ms
+    pub main_port_door_relay_time: u16,    // 10ms
     pub wiegand_port_door_relay_time: u16, // 10ms
-    pub alarm_relay_time:             u16, // 10ms
-    pub main_port_options:             ControllerPortOptions,
-    pub wiegand_port_options:          ControllerPortOptions,
-    pub main_port_extended_options:    ExtendedControllerOptions,
+    pub alarm_relay_time: u16,             // 10ms
+    pub main_port_options: ControllerPortOptions,
+    pub wiegand_port_options: ControllerPortOptions,
+    pub main_port_extended_options: ExtendedControllerOptions,
     pub wiegand_port_extended_options: ExtendedControllerOptions,
-    pub main_port_door_close_time:    u8, // seconds
+    pub main_port_door_close_time: u8,    // seconds
     pub wiegand_port_door_close_time: u8, // seconds
-    pub main_port_arming:    bool,
+    pub main_port_arming: bool,
     pub wiegand_port_arming: bool,
     pub access_mode: ControllerAccessMode,
     pub armed_output_pulse_width: u8, // 10 ms
-    pub arming_delay: u8, // seconds
-    pub alarm_delay:  u8, // seconds
+    pub arming_delay: u8,             // seconds
+    pub alarm_delay: u8,              // seconds
     pub uart_data: UARTData,
     pub common_options: CommonOptions,
     pub display_options: DisplayOptions,
@@ -232,44 +263,50 @@ pub struct ControllerOptions {
     pub operation_mode: Option<OperationMode>, // version 2.9 and later
     pub main_port_egress_beeps: Option<u8>,    // version 3.3 and later
     pub wiegand_port_egress_beeps: Option<u8>, // version 3.3 and later
-    // Data52: reserved
+                                               // Data52: reserved
 }
 
 impl ControllerOptions {
     pub fn decode(data: &[u8], version: Version) -> Result<ControllerOptions> {
         let mut expected_length = 46;
-        if version >= Version::new(2, 5, 0) { expected_length = 49; }
-        if version >= Version::new(2, 9, 0) { expected_length = 50; }
-        if version >= Version::new(3, 3, 0) { expected_length = 52; }
+        if version >= Version::new(2, 5, 0) {
+            expected_length = 49;
+        }
+        if version >= Version::new(2, 9, 0) {
+            expected_length = 50;
+        }
+        if version >= Version::new(3, 3, 0) {
+            expected_length = 52;
+        }
         if data.len() < expected_length {
             return Err(ProtocolError::NotEnoughData.into());
         }
 
-        let main_port_door_number    = data[2];
+        let main_port_door_number = data[2];
         let wiegand_port_door_number = data[3];
         let edit_password = u32::from_be_bytes([data[4], data[5], data[6], data[7]]);
         let master_user_range_start = u32::from_be_bytes([data[8], data[9], data[10], data[11]]);
-        let master_user_range_end   = u32::from_be_bytes([data[12], data[13], data[14], data[15]]);
-        let general_password        = u16::from_be_bytes([data[16], data[17]]);
-        let duress_code             = u16::from_be_bytes([data[18], data[19]]);
+        let master_user_range_end = u32::from_be_bytes([data[12], data[13], data[14], data[15]]);
+        let general_password = u16::from_be_bytes([data[16], data[17]]);
+        let duress_code = u16::from_be_bytes([data[18], data[19]]);
         // Data 20-21 reserved
         let connected_reader_bitmask = u16::from_be_bytes([data[22], data[23]]);
         let tag_hold_time = u16::from_be_bytes([data[24], data[25]]);
-        let main_port_door_relay_time    = u16::from_be_bytes([data[26], data[27]]);
+        let main_port_door_relay_time = u16::from_be_bytes([data[26], data[27]]);
         let wiegand_port_door_relay_time = u16::from_be_bytes([data[28], data[29]]);
         let alarm_relay_time = u16::from_be_bytes([data[30], data[31]]);
-        let main_port_options    = ControllerPortOptions::decode(data[32]);
+        let main_port_options = ControllerPortOptions::decode(data[32]);
         let wiegand_port_options = ControllerPortOptions::decode(data[33]);
-        let main_port_extended_options    = ExtendedControllerOptions::decode(data[34]);
+        let main_port_extended_options = ExtendedControllerOptions::decode(data[34]);
         let wiegand_port_extended_options = ExtendedControllerOptions::decode(data[35]);
-        let main_port_door_close_time    = data[36];
+        let main_port_door_close_time = data[36];
         let wiegand_port_door_close_time = data[37];
-        let main_port_arming    = data[38] & 0b00000001 != 0;
+        let main_port_arming = data[38] & 0b00000001 != 0;
         let wiegand_port_arming = data[38] & 0b00000010 != 0;
         let access_mode = ControllerAccessMode::from_u8(data[39]).ok_or(ProtocolError::UnknownControllerAccessMode)?;
         let armed_output_pulse_width = data[40];
         let arming_delay = data[41];
-        let alarm_delay =  data[42];
+        let alarm_delay = data[42];
         let uart_data = UARTData::decode(data[43])?;
         let common_options = CommonOptions::decode(data[44]);
         let display_options = DisplayOptions::decode(data[45]);
@@ -277,17 +314,21 @@ impl ControllerOptions {
         // TODO use then_some when bool_to_option is stabilized https://github.com/rust-lang/rust/issues/64260
         let keyboard_lock_error_times = (version >= Version::new(2, 5, 0)).then(|| data[46]);
 
-        let host_port_baud =          if version >= Version::new(2, 5, 0) {
+        let host_port_baud = if version >= Version::new(2, 5, 0) {
             Some(HostBaudRate::from_u8(data[47]).ok_or(ProtocolError::UnknownHostBaudRate)?)
-        } else { None };
+        } else {
+            None
+        };
 
-        let slave_flags =               (version >= Version::new(2, 5, 0)).then(|| SlaveFlags::decode(data[48]));
+        let slave_flags = (version >= Version::new(2, 5, 0)).then(|| SlaveFlags::decode(data[48]));
 
-        let operation_mode =          if version >= Version::new(2, 9, 0) {
+        let operation_mode = if version >= Version::new(2, 9, 0) {
             Some(OperationMode::from_u8(data[49]).ok_or(ProtocolError::UnknownOperationMode)?)
-        } else { None };
+        } else {
+            None
+        };
 
-        let main_port_egress_beeps =    (version >= Version::new(3, 3, 0)).then(|| data[50]);
+        let main_port_egress_beeps = (version >= Version::new(3, 3, 0)).then(|| data[50]);
         let wiegand_port_egress_beeps = (version >= Version::new(3, 3, 0)).then(|| data[51]);
 
         Ok(ControllerOptions {
@@ -328,10 +369,7 @@ impl ControllerOptions {
     }
 
     pub fn encode(&self, version: Version) -> Result<Vec<u8>> {
-        let mut data = vec![
-            self.main_port_door_number,
-            self.wiegand_port_door_number
-        ];
+        let mut data = vec![self.main_port_door_number, self.wiegand_port_door_number];
         data.extend_from_slice(&self.edit_password.to_be_bytes());
         data.extend_from_slice(&self.master_user_range_start.to_be_bytes());
         data.extend_from_slice(&self.master_user_range_end.to_be_bytes());
@@ -351,8 +389,12 @@ impl ControllerOptions {
         data.push(self.wiegand_port_door_close_time);
 
         let mut arming_status = 0x00000000;
-        if self.main_port_arming { arming_status += 0b00000001; }
-        if self.wiegand_port_arming { arming_status += 0b00000010; }
+        if self.main_port_arming {
+            arming_status += 0b00000001;
+        }
+        if self.wiegand_port_arming {
+            arming_status += 0b00000010;
+        }
         data.push(arming_status);
 
         data.push(self.access_mode as u8);
@@ -405,27 +447,43 @@ pub struct ControllerPortOptions {
 impl ControllerPortOptions {
     pub fn decode(data: u8) -> ControllerPortOptions {
         ControllerPortOptions {
-            anti_pass_back_enabled:   data & 0b10000000 != 0,
-            anti_pass_back_in:        data & 0b01000000 != 0,
-            force_open_alarm:         data & 0b00100000 != 0,
-            egress_button:            data & 0b00010000 != 0,
-            skip_pin_check:           data & 0b00001000 != 0,
-            auto_open_zone:           data & 0b00000100 != 0,
-            auto_lock_door:           data & 0b00000010 != 0,
+            anti_pass_back_enabled: data & 0b10000000 != 0,
+            anti_pass_back_in: data & 0b01000000 != 0,
+            force_open_alarm: data & 0b00100000 != 0,
+            egress_button: data & 0b00010000 != 0,
+            skip_pin_check: data & 0b00001000 != 0,
+            auto_open_zone: data & 0b00000100 != 0,
+            auto_lock_door: data & 0b00000010 != 0,
             time_attendance_disabled: data & 0b00000001 != 0,
         }
     }
 
     pub fn encode(&self) -> u8 {
         let mut data = 0b00000000;
-        if self.anti_pass_back_enabled   { data += 0b10000000; }
-        if self.anti_pass_back_in        { data += 0b01000000; }
-        if self.force_open_alarm         { data += 0b00100000; }
-        if self.egress_button            { data += 0b00010000; }
-        if self.skip_pin_check           { data += 0b00001000; }
-        if self.auto_open_zone           { data += 0b00000100; }
-        if self.auto_lock_door           { data += 0b00000010; }
-        if self.time_attendance_disabled { data += 0b00000001; }
+        if self.anti_pass_back_enabled {
+            data += 0b10000000;
+        }
+        if self.anti_pass_back_in {
+            data += 0b01000000;
+        }
+        if self.force_open_alarm {
+            data += 0b00100000;
+        }
+        if self.egress_button {
+            data += 0b00010000;
+        }
+        if self.skip_pin_check {
+            data += 0b00001000;
+        }
+        if self.auto_open_zone {
+            data += 0b00000100;
+        }
+        if self.auto_lock_door {
+            data += 0b00000010;
+        }
+        if self.time_attendance_disabled {
+            data += 0b00000001;
+        }
         data
     }
 }
@@ -446,30 +504,45 @@ impl ExtendedControllerOptions {
     pub fn decode(data: u8) -> ExtendedControllerOptions {
         ExtendedControllerOptions {
             door_relay_active_in_auto_open_time_zone: data & 0b10000000 != 0,
-            stop_alarm_at_door_closed:                data & 0b01000000 != 0,
-            free_tag_access_mode:                     data & 0b00100000 != 0,
-            use_main_door_relay_for_wiegand_port:     data & 0b00010000 != 0, // only present for wiegand port
-            auto_disarmed_time_zone:                  data & 0b00001000 != 0,
-            key_pad_inhibited:                        data & 0b00000100 != 0,
-            fingerprint_only_enabled:                 data & 0b00000010 != 0, // only present for main port
-            egress_button_sound:                      data & 0b00000001 != 0,
+            stop_alarm_at_door_closed: data & 0b01000000 != 0,
+            free_tag_access_mode: data & 0b00100000 != 0,
+            use_main_door_relay_for_wiegand_port: data & 0b00010000 != 0, // only present for wiegand port
+            auto_disarmed_time_zone: data & 0b00001000 != 0,
+            key_pad_inhibited: data & 0b00000100 != 0,
+            fingerprint_only_enabled: data & 0b00000010 != 0, // only present for main port
+            egress_button_sound: data & 0b00000001 != 0,
         }
     }
 
     pub fn encode(&self, main_port: bool) -> u8 {
         let mut data = 0b00000000;
-        if self.door_relay_active_in_auto_open_time_zone { data += 0b10000000; }
-        if self.stop_alarm_at_door_closed                { data += 0b01000000; }
-        if self.free_tag_access_mode                     { data += 0b00100000; }
-        if !main_port && self.use_main_door_relay_for_wiegand_port { data += 0b00010000; }
-        if self.auto_disarmed_time_zone                  { data += 0b00001000; }
-        if self.key_pad_inhibited                        { data += 0b00000100; }
-        if main_port && self.fingerprint_only_enabled    { data += 0b00000010; }
-        if self.egress_button_sound                      { data += 0b00000001; }
+        if self.door_relay_active_in_auto_open_time_zone {
+            data += 0b10000000;
+        }
+        if self.stop_alarm_at_door_closed {
+            data += 0b01000000;
+        }
+        if self.free_tag_access_mode {
+            data += 0b00100000;
+        }
+        if !main_port && self.use_main_door_relay_for_wiegand_port {
+            data += 0b00010000;
+        }
+        if self.auto_disarmed_time_zone {
+            data += 0b00001000;
+        }
+        if self.key_pad_inhibited {
+            data += 0b00000100;
+        }
+        if main_port && self.fingerprint_only_enabled {
+            data += 0b00000010;
+        }
+        if self.egress_button_sound {
+            data += 0b00000001;
+        }
         data
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DIPortStatus {
@@ -483,10 +556,10 @@ impl DIPortStatus {
     pub fn decode(data: u8) -> DIPortStatus {
         // Note: Active == 0 !!!
         DIPortStatus {
-            main_egress_active:          data & 0b00000001 == 0,
-            main_door_sensor_active:     data & 0b00000010 == 0,
-            wiegand_egress_active:       data & 0b00000100 == 0,
-            wiegand_door_sensor_active:  data & 0b00001000 == 0,
+            main_egress_active: data & 0b00000001 == 0,
+            main_door_sensor_active: data & 0b00000010 == 0,
+            wiegand_egress_active: data & 0b00000100 == 0,
+            wiegand_door_sensor_active: data & 0b00001000 == 0,
         }
     }
 }
@@ -502,9 +575,9 @@ impl RelayPortStatus {
     pub fn decode(data: u8) -> RelayPortStatus {
         // Note: Active == 0 !!!
         RelayPortStatus {
-            main_door_relay_active:    data & 0b00000001 == 0,
+            main_door_relay_active: data & 0b00000001 == 0,
             wiegand_door_relay_active: data & 0b00010000 == 0,
-            alarm_relay_active:        data & 0b10000000 == 0,
+            alarm_relay_active: data & 0b10000000 == 0,
         }
     }
 }
@@ -555,7 +628,7 @@ impl AllKeysPressedData {
         Ok(AllKeysPressedData {
             input_value,
             fifth_key_data,
-            device_params
+            device_params,
         })
     }
 }
@@ -577,15 +650,15 @@ impl NewCardPresentData {
         if data.len() < 10 {
             return Err(ProtocolError::NotEnoughData.into());
         }
-        let site_code    = u16::from_be_bytes([data[1], data[2]]);
-        let input_value  = u16::from_be_bytes([data[3], data[4]]);
-        let card_code    = u16::from_be_bytes([data[5], data[6]]);
-        let card_id     = TagId32::new(site_code, card_code);
-        let id_em4001    = data[7];
+        let site_code = u16::from_be_bytes([data[1], data[2]]);
+        let input_value = u16::from_be_bytes([data[3], data[4]]);
+        let card_code = u16::from_be_bytes([data[5], data[6]]);
+        let card_id = TagId32::new(site_code, card_code);
+        let id_em4001 = data[7];
 
         let device_params = ControllerPortOptions::decode(data[8]);
 
-        let from_wiegand =              data[9] & 0b1000000 != 0;
+        let from_wiegand = data[9] & 0b1000000 != 0;
         let setting_forced_open_alarm = data[9] & 0b0100000 != 0;
 
         Ok(NewCardPresentData {
@@ -613,10 +686,7 @@ impl KeypadEventData {
         let key_counter = data[1];
         let key_data = data[2..].to_vec();
 
-        Ok(KeypadEventData {
-            key_counter,
-            key_data
-        })
+        Ok(KeypadEventData { key_counter, key_data })
     }
 }
 
@@ -638,23 +708,35 @@ impl UserMode {
 
         UserMode {
             access_mode: UserAccessMode::decode(access_mode_msb, access_mode_lsb),
-            patrol_card:                        data & 0b00100000 != 0,
+            patrol_card: data & 0b00100000 != 0,
             card_omitted_after_fingerprint_rec: data & 0b00010000 != 0,
             fingerprint_omitted_after_card_rec: data & 0b00001000 != 0,
-            expire_check:                       data & 0b00000100 != 0,
-            anti_pass_back_control:             data & 0b00000010 != 0,
-            password_change_available:          data & 0b00000001 != 0,
+            expire_check: data & 0b00000100 != 0,
+            anti_pass_back_control: data & 0b00000010 != 0,
+            password_change_available: data & 0b00000001 != 0,
         }
     }
 
     pub fn encode(&self) -> u8 {
         let mut data = self.access_mode.encode() << 6;
-        if self.patrol_card                        { data += 0b00100000; }
-        if self.card_omitted_after_fingerprint_rec { data += 0b00010000; }
-        if self.fingerprint_omitted_after_card_rec { data += 0b00001000; }
-        if self.expire_check                       { data += 0b00000100; }
-        if self.anti_pass_back_control             { data += 0b00000010; }
-        if self.password_change_available          { data += 0b00000001; }
+        if self.patrol_card {
+            data += 0b00100000;
+        }
+        if self.card_omitted_after_fingerprint_rec {
+            data += 0b00010000;
+        }
+        if self.fingerprint_omitted_after_card_rec {
+            data += 0b00001000;
+        }
+        if self.expire_check {
+            data += 0b00000100;
+        }
+        if self.anti_pass_back_control {
+            data += 0b00000010;
+        }
+        if self.password_change_available {
+            data += 0b00000001;
+        }
         data
     }
 }
@@ -696,7 +778,7 @@ pub struct UserParameters {
 }
 
 impl Default for UserParameters {
-    fn default() -> Self { 
+    fn default() -> Self {
         UserParameters {
             tag_id: TagId64::USER_NOT_FOUND,
             pin_code: 0,
@@ -716,7 +798,7 @@ impl Default for UserParameters {
             available_doors_bitmap: u16::MAX,
             last_allowed_date: NaiveDate::from_ymd(2099, 12, 31),
             level: 0,
-            enable_anti_pass_back_check: false
+            enable_anti_pass_back_check: false,
         }
     }
 }
@@ -798,10 +880,10 @@ pub struct RemoteTCPServerParams {
 
 impl RemoteTCPServerParams {
     pub fn decode(data: &[u8]) -> RemoteTCPServerParams {
-        let first_remote_address  = Ipv4Addr::new(data[0], data[1], data[2], data[3]);
-        let first_remote_port     = u16::from_be_bytes([data[4], data[5]]);
+        let first_remote_address = Ipv4Addr::new(data[0], data[1], data[2], data[3]);
+        let first_remote_port = u16::from_be_bytes([data[4], data[5]]);
         let second_remote_address = Ipv4Addr::new(data[6], data[7], data[8], data[9]);
-        let second_remote_port    = u16::from_be_bytes([data[10], data[11]]);
+        let second_remote_port = u16::from_be_bytes([data[10], data[11]]);
 
         RemoteTCPServerParams {
             first_remote_address,
@@ -813,7 +895,7 @@ impl RemoteTCPServerParams {
 
     pub fn encode(&self) -> Vec<u8> {
         let mut data = Vec::<u8>::new();
-        let first_addr:  u32 = self.first_remote_address.into();
+        let first_addr: u32 = self.first_remote_address.into();
         let second_addr: u32 = self.second_remote_address.into();
 
         data.extend_from_slice(&first_addr.to_be_bytes());
@@ -828,24 +910,24 @@ impl RemoteTCPServerParams {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IpAndMacAddress {
     pub mac_address: MacAddr6,
-    pub ip_address:  Ipv4Addr,
+    pub ip_address: Ipv4Addr,
     pub subnet_mask: Ipv4Addr,
     pub gateway_address: Ipv4Addr,
     pub tcp_port: u16,
-    pub dns_primary:   Ipv4Addr,
+    pub dns_primary: Ipv4Addr,
     pub dns_secondary: Ipv4Addr,
     pub http_server_port: u16,
 }
 
 impl IpAndMacAddress {
     pub fn decode(data: &[u8]) -> IpAndMacAddress {
-        let mac_address      = MacAddr6::new(data[0], data[1], data[2], data[3], data[4], data[5]);
-        let ip_address       = Ipv4Addr::new(data[6], data[7], data[8], data[9]);
-        let subnet_mask      = Ipv4Addr::new(data[10], data[11], data[12], data[13]);
-        let gateway_address  = Ipv4Addr::new(data[14], data[15], data[16], data[17]);
-        let tcp_port         = u16::from_be_bytes([data[18], data[19]]);
-        let dns_primary      = Ipv4Addr::new(data[20], data[21], data[22], data[23]);
-        let dns_secondary    = Ipv4Addr::new(data[24], data[25], data[26], data[27]);
+        let mac_address = MacAddr6::new(data[0], data[1], data[2], data[3], data[4], data[5]);
+        let ip_address = Ipv4Addr::new(data[6], data[7], data[8], data[9]);
+        let subnet_mask = Ipv4Addr::new(data[10], data[11], data[12], data[13]);
+        let gateway_address = Ipv4Addr::new(data[14], data[15], data[16], data[17]);
+        let tcp_port = u16::from_be_bytes([data[18], data[19]]);
+        let dns_primary = Ipv4Addr::new(data[20], data[21], data[22], data[23]);
+        let dns_secondary = Ipv4Addr::new(data[24], data[25], data[26], data[27]);
         let http_server_port = u16::from_be_bytes([data[28], data[29]]);
 
         IpAndMacAddress {
@@ -856,16 +938,16 @@ impl IpAndMacAddress {
             tcp_port,
             dns_primary,
             dns_secondary,
-            http_server_port
+            http_server_port,
         }
     }
 
     pub fn encode(&self) -> Vec<u8> {
         let mut data = vec![0x00];
-        let ip_addr:      u32 = self.ip_address.into();
-        let subnet_mask:  u32 = self.subnet_mask.into();
+        let ip_addr: u32 = self.ip_address.into();
+        let subnet_mask: u32 = self.subnet_mask.into();
         let gateway_addr: u32 = self.gateway_address.into();
-        let dns_primary:  u32 = self.dns_primary.into();
+        let dns_primary: u32 = self.dns_primary.into();
         let dns_secondary: u32 = self.dns_secondary.into();
 
         data.extend_from_slice(self.mac_address.as_bytes());
@@ -892,7 +974,7 @@ pub struct ClockData {
 impl ClockData {
     pub fn decode(data: &[u8]) -> Result<ClockData> {
         if data.len() < 12 {
-            return Err(ProtocolError::MessageTooShort.into())
+            return Err(ProtocolError::MessageTooShort.into());
         }
 
         let year = 2000 + data[6] as i32;
@@ -921,7 +1003,7 @@ impl ClockData {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct TagId32 {
-    pub site_code:  u16,
+    pub site_code: u16,
     pub card_code: u16,
 }
 
@@ -936,7 +1018,7 @@ impl TagId32 {
         }
 
         Ok(TagId32 {
-            site_code:  u16::from_be_bytes([data[0], data[1]]),
+            site_code: u16::from_be_bytes([data[0], data[1]]),
             card_code: u16::from_be_bytes([data[2], data[3]]),
         })
     }
@@ -959,7 +1041,9 @@ impl TagId32 {
 }
 
 impl From<TagId32> for u32 {
-    fn from(t: TagId32) -> u32 { t.numeric_format() }
+    fn from(t: TagId32) -> u32 {
+        t.numeric_format()
+    }
 }
 
 impl fmt::Display for TagId32 {
@@ -970,17 +1054,17 @@ impl fmt::Display for TagId32 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct TagId64 {
-    pub first:  u16,
+    pub first: u16,
     pub second: u16,
-    pub third:  u16,
+    pub third: u16,
     pub fourth: u16,
 }
 
 impl TagId64 {
     pub const USER_NOT_FOUND: TagId64 = TagId64 {
-        first:  0xFFFF,
+        first: 0xFFFF,
         second: 0xFFFF,
-        third:  0xFFFF,
+        third: 0xFFFF,
         fourth: 0xFFFF,
     };
 
@@ -994,9 +1078,9 @@ impl TagId64 {
         }
 
         Ok(TagId64 {
-            first:  u16::from_be_bytes([data[0], data[1]]),
+            first: u16::from_be_bytes([data[0], data[1]]),
             second: u16::from_be_bytes([data[2], data[3]]),
-            third:  u16::from_be_bytes([data[4], data[5]]),
+            third: u16::from_be_bytes([data[4], data[5]]),
             fourth: u16::from_be_bytes([data[6], data[7]]),
         })
     }
@@ -1013,10 +1097,7 @@ impl TagId64 {
 
 impl From<TagId64> for u64 {
     fn from(t: TagId64) -> u64 {
-        ((t.first as u64) << 48) +
-        ((t.second as u64) << 32) +
-        ((t.third as u64) << 16) +
-        (t.fourth as u64)
+        ((t.first as u64) << 48) + ((t.second as u64) << 32) + ((t.third as u64) << 16) + (t.fourth as u64)
     }
 }
 
@@ -1040,24 +1121,36 @@ impl HostingFlags {
     pub fn decode(data: u8) -> HostingFlags {
         HostingFlags {
             // RFU:                   data & 0b10000000 != 0,
-            keypad_hosting:           data & 0b01000000 != 0,
-            lcd_screen_hosting:       data & 0b00100000 != 0,
-            inhibit_125khz_tags:      data & 0b00010000 != 0,
-            inhibit_13_56mhz_tags:    data & 0b00001000 != 0,
+            keypad_hosting: data & 0b01000000 != 0,
+            lcd_screen_hosting: data & 0b00100000 != 0,
+            inhibit_125khz_tags: data & 0b00010000 != 0,
+            inhibit_13_56mhz_tags: data & 0b00001000 != 0,
             // RFU                    data & 0b00000100 != 0,
-            alarm_on_invalid_tag:     data & 0b00000010 != 0,
-            disable_buzzer:           data & 0b00000001 != 0,
+            alarm_on_invalid_tag: data & 0b00000010 != 0,
+            disable_buzzer: data & 0b00000001 != 0,
         }
     }
 
     pub fn encode(&self) -> u8 {
         let mut data = 0b00000000;
-        if self.keypad_hosting           { data += 0b01000000; }
-        if self.lcd_screen_hosting       { data += 0b00100000; }
-        if self.inhibit_125khz_tags      { data += 0b00010000; }
-        if self.inhibit_13_56mhz_tags    { data += 0b00001000; }
-        if self.alarm_on_invalid_tag     { data += 0b00000010; }
-        if self.disable_buzzer           { data += 0b00000001; }
+        if self.keypad_hosting {
+            data += 0b01000000;
+        }
+        if self.lcd_screen_hosting {
+            data += 0b00100000;
+        }
+        if self.inhibit_125khz_tags {
+            data += 0b00010000;
+        }
+        if self.inhibit_13_56mhz_tags {
+            data += 0b00001000;
+        }
+        if self.alarm_on_invalid_tag {
+            data += 0b00000010;
+        }
+        if self.disable_buzzer {
+            data += 0b00000001;
+        }
         data
     }
 }
@@ -1068,27 +1161,32 @@ mod tests {
 
     #[test]
     fn decode_controller_options() {
-        assert_eq!(ControllerPortOptions::decode(16), ControllerPortOptions {
-            anti_pass_back_enabled: false,
-            anti_pass_back_in: false,
-            force_open_alarm: false,
-            egress_button: true,
-            skip_pin_check: false,
-            auto_open_zone: false,
-            auto_lock_door: false,
-            time_attendance_disabled: false,
-        });
+        assert_eq!(
+            ControllerPortOptions::decode(16),
+            ControllerPortOptions {
+                anti_pass_back_enabled: false,
+                anti_pass_back_in: false,
+                force_open_alarm: false,
+                egress_button: true,
+                skip_pin_check: false,
+                auto_open_zone: false,
+                auto_lock_door: false,
+                time_attendance_disabled: false,
+            }
+        );
 
-        assert_eq!(ControllerPortOptions::decode(15), ControllerPortOptions {
-            anti_pass_back_enabled: false,
-            anti_pass_back_in: false,
-            force_open_alarm: false,
-            egress_button: false,
-            skip_pin_check: true,
-            auto_open_zone: true,
-            auto_lock_door: true,
-            time_attendance_disabled: true,
-        });
+        assert_eq!(
+            ControllerPortOptions::decode(15),
+            ControllerPortOptions {
+                anti_pass_back_enabled: false,
+                anti_pass_back_in: false,
+                force_open_alarm: false,
+                egress_button: false,
+                skip_pin_check: true,
+                auto_open_zone: true,
+                auto_lock_door: true,
+                time_attendance_disabled: true,
+            }
+        );
     }
-
 }

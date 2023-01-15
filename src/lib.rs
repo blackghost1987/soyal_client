@@ -2,25 +2,25 @@
 extern crate enum_primitive;
 
 pub mod common;
-pub mod response;
-pub mod request;
-pub mod structs;
 pub mod enums;
+pub mod request;
+pub mod response;
+pub mod structs;
 
 pub use crate::common::*;
 use crate::enums::*;
-use crate::structs::*;
 use crate::request::*;
 use crate::response::*;
+use crate::structs::*;
 
-use chrono::{DateTime, Local, Timelike, Datelike};
+use chrono::{DateTime, Datelike, Local, Timelike};
 use either::Either;
 use log::*;
 use semver::Version;
 use serde::Serialize;
 use std::io;
 use std::io::prelude::*;
-use std::net::{Ipv4Addr, TcpStream, SocketAddr};
+use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::time::Duration;
 
 #[derive(Clone, Debug, Serialize)]
@@ -66,7 +66,9 @@ impl SoyalClient {
 
     pub fn close_connection(&mut self) -> io::Result<()> {
         match self.stream.as_ref() {
-            Some(st) => { st.shutdown(std::net::Shutdown::Both)?; },
+            Some(st) => {
+                st.shutdown(std::net::Shutdown::Both)?;
+            },
             None => (),
         }
         self.stream = None;
@@ -131,7 +133,10 @@ impl SoyalClient {
         self.send_and_read_response(Command::GetControllerParams, &[sub_code as u8])
     }
 
-    pub fn get_controller_params<T>(&mut self, sub_code: ControllerParamSubCommand) -> Result<T> where T: Response<T> {
+    pub fn get_controller_params<T>(&mut self, sub_code: ControllerParamSubCommand) -> Result<T>
+    where
+        T: Response<T>,
+    {
         let raw = self.get_controller_params_inner(sub_code)?;
         if raw.is_empty() {
             return Err(ProtocolError::NoResponse.into());
@@ -211,7 +216,7 @@ impl SoyalClient {
                     return Err(ProtocolError::EventLogOutOfRange.into());
                 }
                 EventLogResponse::decode(&raw).map(Either::Right)
-            }
+            },
         }
     }
 
