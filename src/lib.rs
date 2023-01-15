@@ -42,14 +42,26 @@ impl SoyalClient {
     }
 
     pub fn new_with_timeout(access_data: AccessData, timeout: Duration) -> SoyalClient {
-        let address = SocketAddr::new(access_data.ip.into(), access_data.port);
-        let stream_res = TcpStream::connect_timeout(&address, timeout);
-
-        SoyalClient {
+        let mut client = SoyalClient {
             access_data,
             timeout,
-            stream: stream_res.ok(),
+            stream: None,
+        };
+
+        if let Err(e) = client.open_connection() {
+            warn!("Initial connection failed. Error: {}", e);
         }
+
+        client
+    }
+
+    fn open_connection(&mut self) -> io::Result<()> {
+        let address = SocketAddr::new(self.access_data.ip.into(), self.access_data.port);
+        let new_stream = TcpStream::connect_timeout(&address, self.timeout)?;
+        new_stream.set_read_timeout(Some(self.timeout))?;
+        new_stream.set_write_timeout(Some(self.timeout))?;
+        self.stream = Some(new_stream);
+        Ok(())
     }
 
     pub fn close_connection(&mut self) -> io::Result<()> {
@@ -58,7 +70,7 @@ impl SoyalClient {
             None => (),
         }
         self.stream = None;
-        trace!("Connection closed.");
+        trace!("Connection closed successfully.");
         Ok(())
     }
 
@@ -68,10 +80,8 @@ impl SoyalClient {
 
     fn get_stream(&mut self) -> io::Result<&TcpStream> {
         if self.stream.is_none() {
-            trace!("Reconnecting to reader...");
-            let address = SocketAddr::new(self.access_data.ip.into(), self.access_data.port);
-            let new_stream = TcpStream::connect_timeout(&address, self.timeout)?;
-            self.stream = Some(new_stream);
+            warn!("Reconnecting to reader...");
+            self.open_connection()?;
         }
         let stream = self.stream.as_ref().unwrap();
         Ok(stream)
@@ -89,15 +99,14 @@ impl SoyalClient {
         let res = stream.write_all(&message.encode());
 
         if let Err(e) = res {
-            warn!("Connection closed! Reason: {:?}", e);
+            warn!("Connection closed unexpectedly! Reason: {:?}", e);
             self.stream = None;
         }
 
         Ok(())
     }
 
-    fn send_and_read_response(&mut self, command: Command, data: &[u8]) -> io::Result<Vec<u8>> {
-        self.send(command, data)?;
+    fn read(&mut self) -> io::Result<Vec<u8>> {
         let mut buffer = [0; 128];
 
         let timeout = self.timeout.clone();
@@ -109,6 +118,11 @@ impl SoyalClient {
         trace!("Received {} bytes: {:?}", size, &buffer[0..size]);
 
         io::Result::Ok(buffer[0..size].to_vec())
+    }
+
+    fn send_and_read_response(&mut self, command: Command, data: &[u8]) -> io::Result<Vec<u8>> {
+        self.send(command, data)?;
+        self.read()
     }
 
     //*** CONTROLLER PARAMETER GETTERS
