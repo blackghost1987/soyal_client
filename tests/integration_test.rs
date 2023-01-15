@@ -294,7 +294,7 @@ fn test_set_user_params() {
             user_time_zone: 0,
         },
         available_doors_bitmap: 0xFFFF,
-        last_allowed_date: NaiveDate::from_ymd(2099, 12, 31),
+        last_allowed_date: NaiveDate::from_ymd_opt(2099, 12, 31).expect("should be a valid date"),
         level: 0,
         enable_anti_pass_back_check: false,
     };

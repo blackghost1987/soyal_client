@@ -796,7 +796,7 @@ impl Default for UserParameters {
                 user_time_zone: 0,
             },
             available_doors_bitmap: u16::MAX,
-            last_allowed_date: NaiveDate::from_ymd(2099, 12, 31),
+            last_allowed_date: NaiveDate::from_ymd_opt(2099, 12, 31).expect("should be a valid date"),
             level: 0,
             enable_anti_pass_back_check: false,
         }
@@ -823,7 +823,7 @@ impl UserParameters {
         let year = 2000 + data[16] as i32;
         let month = data[17] as u32;
         let day = data[18] as u32;
-        let last_allowed_date = NaiveDate::from_ymd(year, month, day);
+        let last_allowed_date = NaiveDate::from_ymd_opt(year, month, day).ok_or(ProtocolError::InvalidDate)?;
 
         let level = data[19];
         let enable_anti_pass_back_check = data[20] & 0b1000000 != 0;
@@ -983,7 +983,10 @@ impl ClockData {
         let hour = data[2] as u32;
         let minute = data[1] as u32;
         let second = data[0] as u32;
-        let time = Local.ymd(year, month, day).and_hms(hour, minute, second);
+        let time = Local
+            .with_ymd_and_hms(year, month, day, hour, minute, second)
+            .latest()
+            .ok_or(ProtocolError::InvalidDateTime)?;
 
         let firmware_major = (data[7] & 0xF0) >> 4;
         let firmware_minor = data[7] & 0x0F;

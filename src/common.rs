@@ -34,6 +34,8 @@ pub enum ProtocolError {
     VersionMismatch,
     NoResponse,
     CommandNotAcknowledged,
+    InvalidDate,
+    InvalidDateTime,
 }
 
 #[derive(Debug)]

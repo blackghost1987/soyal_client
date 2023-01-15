@@ -453,7 +453,10 @@ impl Response<EventLogResponse> for EventLogResponse {
         let hour = data[3] as u32;
         let minute = data[2] as u32;
         let second = data[1] as u32;
-        let timestamp = Local.ymd(year, month, day).and_hms(hour, minute, second);
+        let timestamp = Local
+            .with_ymd_and_hms(year, month, day, hour, minute, second)
+            .latest()
+            .ok_or(ProtocolError::InvalidDateTime)?;
 
         let port_number = EventPortNumber::from_u8(data[8]).ok_or(ProtocolError::UnknownPortNumber)?;
 
