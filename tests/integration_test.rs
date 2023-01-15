@@ -101,12 +101,37 @@ fn test_set_controller_options() {
         armed_output_pulse_width: 0,
         arming_delay: 1,
         alarm_delay: 1,
-        uart_data: UARTData { uart2_type: UART2Type::LiftController, uart2_baud_rate: UartBaudRate::Baud9600, uart3_type: UART3Type::YungTAILiftPort },
-        common_options: CommonOptions { enable_black_table_check: false, show_local_language_manual: false, rs485_port_function: RS485PortFunction::HostCommunication, wiegand_signal_output_disable: true, lcd_display_date_in_dd_mm: false, auto_reset_anti_pass_back: false, trigger_alarm_on_expired_user: false },
-        display_options: DisplayOptions { fingerprint_enroll_duplication_check: false, auto_duty_code_shift_table_enabled: false, show_wiegand_port_message_on_main_lcd: true, uid_display_format: UIDDisplayFormat::WG32 },
-        keyboard_lock_error_times: Some(5),
+        uart_data: UARTData {
+            uart2_type: UART2Type::LiftController,
+            uart2_baud_rate: UartBaudRate::Baud9600,
+            uart3_type: UART3Type::YungTAILiftPort
+        },
+        common_options: CommonOptions {
+            enable_black_table_check: false,
+            show_local_language_manual: false,
+            rs485_port_function: RS485PortFunction::HostCommunication,
+            wiegand_signal_output_disable: true,
+            lcd_display_date_in_dd_mm: false,
+            auto_reset_anti_pass_back: false,
+            trigger_alarm_on_expired_user: false
+        },
+        display_options: DisplayOptions {
+            fingerprint_enroll_duplication_check: false,
+            auto_duty_code_shift_table_enabled: false,
+            show_wiegand_port_message_on_main_lcd: true,
+            uid_display_format: UIDDisplayFormat::WG32
+        },
+        keyboard_lock_error_times: Some(0),
         host_port_baud: Some(HostBaudRate::Baud9600),
-        slave_flags: Some(SlaveFlags { slave_mode_enabled: false, keyboard_locked: false, lcd_update_locked: false, inhibit_125khz_tags: false, inhibit_13_56mhz_tags: false, fire_alarm_input_enabled: false, alarm_on_invalid_tag: false }),
+        slave_flags: Some(SlaveFlags {
+            slave_mode_enabled: false,
+            keyboard_locked: false,
+            lcd_update_locked: false,
+            inhibit_125khz_tags: false,
+            inhibit_13_56mhz_tags: false,
+            fire_alarm_input_enabled: false,
+            alarm_on_invalid_tag: false,
+        }),
         operation_mode: Some(OperationMode::Users16kFloors64),
         main_port_egress_beeps: Some(3),
         wiegand_port_egress_beeps: Some(3),
@@ -310,5 +335,21 @@ fn test_set_clock() {
     let mut client = create_client();
     let res = client.set_real_time_clock(Local::now());
     println!("Set RTC response: {:?}", res);
+    assert!(res.is_ok());
+}
+
+#[test]
+#[ignore]
+fn test_set_hosting_flag() {
+    let mut client = create_client();
+    let res = client.set_hosting_flag(HostingFlags {
+        keypad_hosting: false,
+        lcd_screen_hosting: false,
+        inhibit_125khz_tags: false,
+        inhibit_13_56mhz_tags: false,
+        alarm_on_invalid_tag: false,
+        disable_buzzer: false
+    });
+    println!("Set Hosting Flag response: {:?}", res);
     assert!(res.is_ok());
 }
