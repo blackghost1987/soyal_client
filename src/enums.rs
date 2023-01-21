@@ -194,7 +194,7 @@ impl ControllerStatus {
             0x01 => AllKeysPressedData::decode(data).map(ControllerStatus::from),
             0x02 => NewCardPresentData::decode(data).map(ControllerStatus::from),
             0x06 => KeypadEventData::decode(data).map(ControllerStatus::from),
-            _ => Err(ProtocolError::UnknownEventType.into()),
+            other => Err(ProtocolError::UnknownEventType(other).into()),
         }
     }
 }

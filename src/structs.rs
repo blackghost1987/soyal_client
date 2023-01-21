@@ -105,16 +105,17 @@ impl UARTData {
                 0b00000101 => Ok(UART2Type::SlavePortAR716E),
                 0b00001001 => Ok(UART2Type::VoiceModuleOrReader),
                 0b00001101 => Ok(UART2Type::SerialPrinter),
-                _ => Err(ProtocolError::UnknownUartType), // should not happen
+                other => Err(ProtocolError::UnknownUartType(other)), // should not happen
             },
-            0b00000010 => Err(ProtocolError::UnknownUartType), // reserved
+            0b00000010 => Err(ProtocolError::UnknownUartType(0b00000010)), // reserved
             0b00000011 => Ok(UART2Type::Fingerprint9000),
-            _ => Err(ProtocolError::UnknownUartType), // should not happen
+            other => Err(ProtocolError::UnknownUartType(other)), // should not happen
         }?;
 
         let baud_rate_bits = data & 0b11000000;
-        let uart2_baud_rate = UartBaudRate::from_u8(baud_rate_bits).ok_or(ProtocolError::UnknownUartBaudRate)?;
-        let uart3_type = UART3Type::from_u8(data & 0b00110000).ok_or(ProtocolError::UnknownUartType)?;
+        let uart2_baud_rate = UartBaudRate::from_u8(baud_rate_bits).ok_or(ProtocolError::UnknownUartBaudRate(baud_rate_bits))?;
+        let uart_type_bits = data & 0b00110000;
+        let uart3_type = UART3Type::from_u8(uart_type_bits).ok_or(ProtocolError::UnknownUartType(uart_type_bits))?;
 
         Ok(UARTData {
             uart2_type,
@@ -303,7 +304,7 @@ impl ControllerOptions {
         let wiegand_port_door_close_time = data[37];
         let main_port_arming = data[38] & 0b00000001 != 0;
         let wiegand_port_arming = data[38] & 0b00000010 != 0;
-        let access_mode = ControllerAccessMode::from_u8(data[39]).ok_or(ProtocolError::UnknownControllerAccessMode)?;
+        let access_mode = ControllerAccessMode::from_u8(data[39]).ok_or(ProtocolError::UnknownControllerAccessMode(data[39]))?;
         let armed_output_pulse_width = data[40];
         let arming_delay = data[41];
         let alarm_delay = data[42];
@@ -315,7 +316,7 @@ impl ControllerOptions {
         let keyboard_lock_error_times = (version >= Version::new(2, 5, 0)).then(|| data[46]);
 
         let host_port_baud = if version >= Version::new(2, 5, 0) {
-            Some(HostBaudRate::from_u8(data[47]).ok_or(ProtocolError::UnknownHostBaudRate)?)
+            Some(HostBaudRate::from_u8(data[47]).ok_or(ProtocolError::UnknownHostBaudRate(data[47]))?)
         } else {
             None
         };
@@ -323,7 +324,7 @@ impl ControllerOptions {
         let slave_flags = (version >= Version::new(2, 5, 0)).then(|| SlaveFlags::decode(data[48]));
 
         let operation_mode = if version >= Version::new(2, 9, 0) {
-            Some(OperationMode::from_u8(data[49]).ok_or(ProtocolError::UnknownOperationMode)?)
+            Some(OperationMode::from_u8(data[49]).ok_or(ProtocolError::UnknownOperationMode(data[49]))?)
         } else {
             None
         };
@@ -993,7 +994,7 @@ impl ClockData {
         let firmware_version = semver::Version::new(firmware_major as u64, firmware_minor as u64, 0);
         // data 8-9 reserved
         let firmware_identify_code = data[10];
-        let controller_type = ControllerType::from_u8(data[11]).ok_or(ProtocolError::UnknownControllerType)?;
+        let controller_type = ControllerType::from_u8(data[11]).ok_or(ProtocolError::UnknownControllerType(data[11]))?;
 
         Ok(ClockData {
             time,

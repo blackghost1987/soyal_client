@@ -31,7 +31,7 @@ pub trait Response<T> {
                 true => Ok(&raw[4..]),
                 false => Err(ProtocolError::UnexpectedHeaderValue),
             },
-            _ => Err(ProtocolError::UnexpectedFirstHeaderByte),
+            other => Err(ProtocolError::UnexpectedFirstHeaderByte(other)),
         }?;
 
         let expected_msg_length = u16::from_be_bytes([non_header[0], non_header[1]]) as usize;
@@ -79,7 +79,7 @@ pub trait Response<T> {
     fn get_data_parts(raw: &[u8], expected_command: Option<EchoCode>) -> Result<EchoResponse> {
         let msg = Self::get_message_part(raw)?;
         let destination_id = msg[0];
-        let command: EchoCode = EchoCode::from_u8(msg[1]).ok_or(ProtocolError::UnknownCommandCode)?;
+        let command: EchoCode = EchoCode::from_u8(msg[1]).ok_or(ProtocolError::UnknownCommandCode(msg[1]))?;
 
         if let Some(exp) = expected_command {
             if exp != command {
@@ -241,7 +241,7 @@ impl Response<ControllerOptionsResponse> for ControllerOptionsResponse {
         }
 
         let source = data[0];
-        let controller_type = ControllerType::from_u8(data[1]).ok_or(ProtocolError::UnknownControllerType)?;
+        let controller_type = ControllerType::from_u8(data[1]).ok_or(ProtocolError::UnknownControllerType(data[1]))?;
         let controller_options = ControllerOptions::decode(data, Version::new(4, 3, 0))?;
 
         Ok(ControllerOptionsResponse {
@@ -438,7 +438,7 @@ impl Response<EventLogResponse> for EventLogResponse {
         let msg = Self::get_message_part(raw)?;
 
         let destination_id = msg[0];
-        let function_code = EventFunctionCode::from_u8(msg[1]).ok_or(ProtocolError::UnknownEventFunctionCode)?;
+        let function_code = EventFunctionCode::from_u8(msg[1]).ok_or(ProtocolError::UnknownEventFunctionCode(msg[1]))?;
         let data = &msg[2..];
 
         if data.len() < 25 {
@@ -458,7 +458,7 @@ impl Response<EventLogResponse> for EventLogResponse {
             .latest()
             .ok_or(ProtocolError::InvalidDateTime)?;
 
-        let port_number = EventPortNumber::from_u8(data[8]).ok_or(ProtocolError::UnknownPortNumber)?;
+        let port_number = EventPortNumber::from_u8(data[8]).ok_or(ProtocolError::UnknownPortNumber(data[8]))?;
 
         let user_address_or_tag_id = u16::from_be_bytes([data[9], data[10]]);
         let tag_id = TagId32::decode(&[data[15], data[16], data[19], data[20]])?;

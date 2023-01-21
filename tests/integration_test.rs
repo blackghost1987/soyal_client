@@ -354,3 +354,12 @@ fn test_set_hosting_flag() {
     println!("Set Hosting Flag response: {:?}", res);
     assert!(res.is_ok());
 }
+
+#[test]
+#[ignore]
+fn test_erase_user_data() {
+    let mut client = create_client();
+    let res = client.erase_user_data(0, 15);
+    println!("Set Hosting Flag response: {:?}", res);
+    assert!(res.is_ok());
+}

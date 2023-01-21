@@ -113,14 +113,16 @@ impl SoyalClient {
         let res = stream.write_all(&message.encode());
 
         if let Err(e) = res {
-            warn!("Connection to {} closed unexpectedly! Reason: {:?}", self.access_data.ip, e);
+            warn!("Connection to {} closed unexpectedly during write! Reason: {:?}", self.access_data.ip, e);
             self.stream = None;
+            return Err(e);
         }
 
         Ok(())
     }
 
     fn read(&mut self) -> io::Result<Vec<u8>> {
+        trace!("Waiting for response from {}...", self.access_data.ip);
         let mut stream: &TcpStream = self.get_stream()?;
 
         let mut buffer = [0; 128];
