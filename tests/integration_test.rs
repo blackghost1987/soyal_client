@@ -7,39 +7,39 @@ use soyal_client::structs::*;
 use soyal_client::*;
 
 // WARNING: Hardware-in-the-loop tests! Set real device IP here:
-const IP_ADDR: [u8; 4] = [192, 168, 1, 127];
+const IP_ADDR: [u8; 4] = [192, 168, 1, 200];
 
-fn create_client() -> SoyalClient {
+async fn create_client() -> SoyalClient {
     let access_data = AccessData {
         ip: Ipv4Addr::from(IP_ADDR),
         port: 1621,
         destination_id: 1,
     };
-    SoyalClient::new(access_data)
+    SoyalClient::new(access_data).await
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_poll_reader() {
-    let mut client = create_client();
-    let res = client.poll_reader();
+async fn test_poll_reader() {
+    let mut client = create_client().await;
+    let res = client.poll_reader().await;
     println!("Poll status: {:?}", res);
     assert!(res.is_ok())
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_get_controller_options() {
-    let mut client = create_client();
-    let res = client.get_controller_options();
+async fn test_get_controller_options() {
+    let mut client = create_client().await;
+    let res = client.get_controller_options().await;
     println!("Controller params: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_set_controller_options() {
-    let mut client = create_client();
+async fn test_set_controller_options() {
+    let mut client = create_client().await;
     let controller_options = ControllerOptions {
         main_port_door_number: 1,
         wiegand_port_door_number: 2,
@@ -137,146 +137,150 @@ fn test_set_controller_options() {
         wiegand_port_egress_beeps: Some(3),
     };
 
-    let res = client.set_controller_options(1, controller_options);
+    let res = client.set_controller_options(1, controller_options).await;
     println!("Set controller params response: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_get_remote_tcp_params() {
-    let mut client = create_client();
-    let res = client.get_remote_tcp_server_params();
+async fn test_get_remote_tcp_params() {
+    let mut client = create_client().await;
+    let res = client.get_remote_tcp_server_params().await;
     println!("TCP params: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_set_remote_tcp_params() {
-    let mut client = create_client();
-    let res = client.set_remote_tcp_server_params(RemoteTCPServerParams {
-        first_remote_address: Ipv4Addr::UNSPECIFIED,
-        first_remote_port: 0,
-        second_remote_address: Ipv4Addr::UNSPECIFIED,
-        second_remote_port: 0,
-    });
+async fn test_set_remote_tcp_params() {
+    let mut client = create_client().await;
+    let res = client
+        .set_remote_tcp_server_params(RemoteTCPServerParams {
+            first_remote_address: Ipv4Addr::UNSPECIFIED,
+            first_remote_port: 0,
+            second_remote_address: Ipv4Addr::UNSPECIFIED,
+            second_remote_port: 0,
+        })
+        .await;
     println!("TCP params setting response: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_get_ip_and_mac_address() {
-    let mut client = create_client();
-    let res = client.get_ip_and_mac_address();
+async fn test_get_ip_and_mac_address() {
+    let mut client = create_client().await;
+    let res = client.get_ip_and_mac_address().await;
     println!("IP and MAC: {:?}", res);
     assert!(res.is_ok())
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_set_ip_and_mac_address() {
-    let mut client = create_client();
-    let res = client.set_ip_and_mac_address(IpAndMacAddress {
-        mac_address: MacAddr6::new(0x00, 0x13, 0x57, 0x04, 0x9D, 0x9E),
-        ip_address: Ipv4Addr::new(192, 168, 1, 127),
-        subnet_mask: Ipv4Addr::new(255, 255, 255, 0),
-        gateway_address: Ipv4Addr::new(192, 168, 1, 254),
-        tcp_port: 1621,
-        dns_primary: Ipv4Addr::new(168, 95, 1, 1),
-        dns_secondary: Ipv4Addr::new(168, 95, 192, 1),
-        http_server_port: 80,
-    });
+async fn test_set_ip_and_mac_address() {
+    let mut client = create_client().await;
+    let res = client
+        .set_ip_and_mac_address(IpAndMacAddress {
+            mac_address: MacAddr6::new(0x00, 0x13, 0x57, 0x04, 0x9D, 0x9E),
+            ip_address: Ipv4Addr::new(192, 168, 1, 127),
+            subnet_mask: Ipv4Addr::new(255, 255, 255, 0),
+            gateway_address: Ipv4Addr::new(192, 168, 1, 254),
+            tcp_port: 1621,
+            dns_primary: Ipv4Addr::new(168, 95, 1, 1),
+            dns_secondary: Ipv4Addr::new(168, 95, 192, 1),
+            http_server_port: 80,
+        })
+        .await;
     println!("TCP params setting response: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_get_relay_delays() {
-    let mut client = create_client();
-    let res = client.get_relay_delay_time();
+async fn test_get_relay_delays() {
+    let mut client = create_client().await;
+    let res = client.get_relay_delay_time().await;
     println!("Hardware delays: {:?}", res);
     assert!(res.is_ok())
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_get_edit_pass() {
-    let mut client = create_client();
-    let res = client.get_controller_edit_password();
+async fn test_get_edit_pass() {
+    let mut client = create_client().await;
+    let res = client.get_controller_edit_password().await;
     println!("Hardware password: {:?}", res);
     assert!(res.is_ok())
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_get_reader_serial() {
-    let mut client = create_client();
-    let res = client.get_reader_serial_number();
+async fn test_get_reader_serial() {
+    let mut client = create_client().await;
+    let res = client.get_reader_serial_number().await;
     println!("Hardware serial: {:?}", res);
     assert!(res.is_ok())
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_event_log_status() {
-    let mut client = create_client();
-    let res = client.get_event_log_status();
+async fn test_event_log_status() {
+    let mut client = create_client().await;
+    let res = client.get_event_log_status().await;
     println!("Event log status: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_oldest_event_log() {
-    let mut client = create_client();
-    let res = client.get_oldest_event_log();
+async fn test_oldest_event_log() {
+    let mut client = create_client().await;
+    let res = client.get_oldest_event_log().await;
     println!("Oldest event log: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_specific_event_log() {
-    let mut client = create_client();
-    let res = client.get_specific_event_log(3);
+async fn test_specific_event_log() {
+    let mut client = create_client().await;
+    let res = client.get_specific_event_log(3).await;
     println!("Specific event log: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_remove_oldest_event_log() {
-    let mut client = create_client();
-    let res = client.remove_oldest_event_log();
+async fn test_remove_oldest_event_log() {
+    let mut client = create_client().await;
+    let res = client.remove_oldest_event_log().await;
     println!("Remove oldest event log response: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_empty_event_log() {
-    let mut client = create_client();
-    let res = client.empty_event_log();
+async fn test_empty_event_log() {
+    let mut client = create_client().await;
+    let res = client.empty_event_log().await;
     println!("Empty event log response: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_get_user_params() {
-    let mut client = create_client();
-    let res = client.get_user_parameters(2);
+async fn test_get_user_params() {
+    let mut client = create_client().await;
+    let res = client.get_user_parameters(2).await;
     println!("User params: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_set_user_params() {
-    let mut client = create_client();
+async fn test_set_user_params() {
+    let mut client = create_client().await;
     let user_params = UserParameters {
         tag_id: TagId64::new(0, 0, 131, 13316),
         pin_code: 0,
@@ -298,68 +302,70 @@ fn test_set_user_params() {
         level: 0,
         enable_anti_pass_back_check: false,
     };
-    let res = client.set_user_parameters(2, user_params);
+    let res = client.set_user_parameters(2, user_params).await;
     println!("User params: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_get_relay_control() {
-    let mut client = create_client();
-    let res = client.relay_control(RelayCommand::GetCurrentStatus, RelayPortNumber::AllPorts);
+async fn test_get_relay_control() {
+    let mut client = create_client().await;
+    let res = client.relay_control(RelayCommand::GetCurrentStatus, RelayPortNumber::AllPorts).await;
     println!("Relay status: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_set_relay_control() {
-    let mut client = create_client();
-    let res = client.relay_control(RelayCommand::DoorRelayPulse, RelayPortNumber::AllPorts);
+async fn test_set_relay_control() {
+    let mut client = create_client().await;
+    let res = client.relay_control(RelayCommand::DoorRelayPulse, RelayPortNumber::AllPorts).await;
     println!("Relay status after enable: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_get_clock() {
-    let mut client = create_client();
-    let res = client.get_real_time_clock();
+async fn test_get_clock() {
+    let mut client = create_client().await;
+    let res = client.get_real_time_clock().await;
     println!("Get RTC response: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_set_clock() {
-    let mut client = create_client();
-    let res = client.set_real_time_clock(Local::now());
+async fn test_set_clock() {
+    let mut client = create_client().await;
+    let res = client.set_real_time_clock(Local::now()).await;
     println!("Set RTC response: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_set_hosting_flag() {
-    let mut client = create_client();
-    let res = client.set_hosting_flag(HostingFlags {
-        keypad_hosting: false,
-        lcd_screen_hosting: false,
-        inhibit_125khz_tags: false,
-        inhibit_13_56mhz_tags: false,
-        alarm_on_invalid_tag: false,
-        disable_buzzer: false,
-    });
+async fn test_set_hosting_flag() {
+    let mut client = create_client().await;
+    let res = client
+        .set_hosting_flag(HostingFlags {
+            keypad_hosting: false,
+            lcd_screen_hosting: false,
+            inhibit_125khz_tags: false,
+            inhibit_13_56mhz_tags: false,
+            alarm_on_invalid_tag: false,
+            disable_buzzer: false,
+        })
+        .await;
     println!("Set Hosting Flag response: {:?}", res);
     assert!(res.is_ok());
 }
 
-#[test]
+#[tokio::test]
 #[ignore]
-fn test_erase_user_data() {
-    let mut client = create_client();
-    let res = client.erase_user_data(0, 15);
+async fn test_erase_user_data() {
+    let mut client = create_client().await;
+    let res = client.erase_user_data(0, 15).await;
     println!("Set Hosting Flag response: {:?}", res);
     assert!(res.is_ok());
 }
