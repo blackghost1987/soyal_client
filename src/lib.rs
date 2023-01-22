@@ -49,6 +49,11 @@ impl SoyalClient {
         SoyalClient::new_with_timeout(access_data, default_timeout, Some(default_timeout), Some(default_timeout)).await
     }
 
+    pub fn new_lazy(access_data: AccessData) -> Self {
+        let default_timeout = Duration::from_secs(2);
+        SoyalClient::new_with_timeout_lazy(access_data, default_timeout, Some(default_timeout), Some(default_timeout))
+    }
+
     pub async fn new_with_timeout(
         access_data: AccessData,
         connection_timeout: Duration,
@@ -57,19 +62,28 @@ impl SoyalClient {
     ) -> Self {
         let ip = access_data.ip;
 
-        let mut client = SoyalClient {
-            access_data,
-            connection_timeout,
-            read_timeout,
-            write_timeout,
-            stream: None,
-        };
+        let mut client = SoyalClient::new_with_timeout_lazy(access_data, connection_timeout, read_timeout, write_timeout);
 
         if let Err(e) = client.open_connection().await {
             warn!("Initial connection failed to {}. Error: {}", ip, e);
         }
 
         client
+    }
+
+    pub fn new_with_timeout_lazy(
+        access_data: AccessData,
+        connection_timeout: Duration,
+        read_timeout: Option<Duration>,
+        write_timeout: Option<Duration>,
+    ) -> Self {
+        SoyalClient {
+            access_data,
+            connection_timeout,
+            read_timeout,
+            write_timeout,
+            stream: None,
+        }
     }
 
     async fn open_connection(&mut self) -> io::Result<()> {
