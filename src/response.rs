@@ -25,24 +25,34 @@ pub trait Response<T> {
             return Err(ProtocolError::NoResponse.into());
         }
 
-        let non_header = match raw[0] {
-            0x7E => Ok(&raw[1..]),
+        let (raw_msg, expected_msg_length, msg_length) = match raw[0] {
+            0x7E => {
+                let non_header = &raw[1..];
+                let expected_msg_length = u16::from(non_header[0]) as usize;
+                let msg_length = non_header.len() - 1;
+
+                // ignore the first length byte
+                Ok((&non_header[1..], expected_msg_length, msg_length))
+            },
             0xFF => match raw[0..4] == EXTENDED_HEADER {
-                true => Ok(&raw[4..]),
+                true => {
+                    let non_header = &raw[4..];
+                    let expected_msg_length = u16::from_be_bytes([non_header[0], non_header[1]]) as usize;
+                    let msg_length = non_header.len() - 2;
+
+                    // ignore the first 2 length bytes
+                    Ok((&non_header[2..], expected_msg_length, msg_length))
+                },
                 false => Err(ProtocolError::UnexpectedHeaderValue),
             },
             other => Err(ProtocolError::UnexpectedFirstHeaderByte(other)),
         }?;
 
-        let expected_msg_length = u16::from_be_bytes([non_header[0], non_header[1]]) as usize;
-        let msg_length = non_header.len() - 2;
         if expected_msg_length != msg_length {
             error!("Message length mismatch, expected: {} but got: {}", expected_msg_length, msg_length);
+            debug!("Raw response: {:?}", raw);
             return Err(ProtocolError::MessageLengthMismatch.into());
         };
-
-        // ignore the first 2 length bytes
-        let raw_msg = &non_header[2..];
 
         // get and test XOR and SUM values
         let sum = raw_msg.get(msg_length - 1).expect("Missing sum value");
@@ -789,5 +799,21 @@ mod tests {
             assert_eq!(o.controller_options.arming_delay, 1);
             assert_eq!(o.controller_options.alarm_delay, 1);
         }
+    }
+
+    #[test]
+    fn decode_ack_extended() {
+        let raw = vec![255, 0, 90, 165, 0, 15, 0, 4, 1, 193, 67, 15, 145, 16, 16, 0, 0, 0, 0, 230, 175];
+        let d = AckResponse::decode(&raw);
+        println!("Result: {:?}", d);
+        assert!(d.is_ok());
+    }
+
+    #[test]
+    fn decode_ack_simple() {
+        let raw = vec![126, 15, 0, 4, 1, 193, 67, 15, 145, 16, 16, 0, 0, 0, 0, 230, 175];
+        let d = AckResponse::decode(&raw);
+        println!("Result: {:?}", d);
+        assert!(d.is_ok());
     }
 }
