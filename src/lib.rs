@@ -94,11 +94,8 @@ impl SoyalClient {
     }
 
     pub async fn close_connection(&mut self) -> io::Result<()> {
-        match self.stream.as_mut() {
-            Some(st) => {
-                st.shutdown().await?;
-            },
-            None => (),
+        if let Some(st) = self.stream.as_mut() {
+            st.shutdown().await?;
         }
         self.stream = None;
         trace!("Connection to {} closed successfully.", self.access_data.ip);
